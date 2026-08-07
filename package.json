@@ -11,7 +11,7 @@
     "verify:read-only": "tsx scripts/verify-read-only-adapters.ts && tsx scripts/verify-google-sheets-reader.ts && tsx scripts/verify-provider-selector.ts && tsx scripts/verify-google-oauth-validation.ts && tsx scripts/verify-my-work.ts",
     "verify:task-parity": "tsx scripts/verify-task-parity.ts",
     "verify:auth": "tsx scripts/verify-provider-selector.ts && tsx scripts/verify-google-oauth-validation.ts",
-    "verify:task-db": "tsx scripts/verify-postgres-task-store.ts && tsx scripts/verify-task-input.ts",
+    "verify:task-db": "tsx scripts/verify-postgres-task-store.ts && tsx scripts/verify-task-input.ts && tsx scripts/verify-task-write-gate.ts",
     "verify:task-migration-snapshot": "tsx scripts/verify-task-migration-snapshot.ts",
     "import:tasks": "tsx scripts/import-task-migration.ts"
   },
