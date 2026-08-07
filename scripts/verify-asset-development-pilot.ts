@@ -10,6 +10,7 @@ const root = process.cwd();
 const store = readFileSync(join(root, "src/lib/db/asset-development-store.ts"), "utf8");
 const selector = readFileSync(join(root, "src/lib/adapters/read-only/portfolio-provider-selector.ts"), "utf8");
 const migration = readFileSync(join(root, "migrations/0002_asset_development_pilot.sql"), "utf8");
+const rollback = readFileSync(join(root, "migrations/0002_asset_development_pilot_rollback.sql"), "utf8");
 const projectDetailPage = readFileSync(join(root, "src/app/projects/[id]/page.tsx"), "utf8");
 const assetsPage = readFileSync(join(root, "src/app/assets/page.tsx"), "utf8");
 const assetsStyles = readFileSync(join(root, "src/app/assets/assets.css"), "utf8");
@@ -42,6 +43,10 @@ assert(!/\b(INSERT|UPDATE|DELETE|TRUNCATE)\b/i.test(store), "Asset/development r
 
 for (const table of ["assets", "development_projects", "development_work_packages"]) {
   assert(migration.includes(`CREATE TABLE ${table}`), `Missing ${table} schema.`);
+  assert(rollback.includes(`DROP TABLE IF EXISTS ${table}`), `Missing ${table} rollback.`);
+}
+for (const protectedTable of ["tasks", "task_updates", "activity_events", "migration_runs"]) {
+  assert(!new RegExp(`DROP\\s+TABLE[^;]*\\b${protectedTable}\\b`, "i").test(rollback), `Rollback must never drop ${protectedTable}.`);
 }
 assert(projectDetailPage.includes("getDevelopmentProjectDetail"), "Project detail metadata read is missing.");
 assert(projectDetailPage.includes("getProjectWorkPackages"), "Project work-package read is missing.");
