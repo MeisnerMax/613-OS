@@ -1,5 +1,13 @@
 import { getGoogleOAuthConfig, getGoogleWorkspaceSession } from "@/lib/auth/google-workspace";
 
+export function taskDatabaseWritesEnabled() {
+  return process.env.OPS_TASK_DB_WRITES_ENABLED === "true";
+}
+
+export function requireTaskDatabaseWritesEnabled() {
+  if (!taskDatabaseWritesEnabled()) throw new Error("DB_WRITES_DISABLED");
+}
+
 export async function require613WorkspaceSession() {
   const session = await getGoogleWorkspaceSession();
   const { allowedDomain } = getGoogleOAuthConfig();
