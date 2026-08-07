@@ -5,6 +5,7 @@ import {
   isGoogleOAuthConfigured,
 } from "@/lib/auth/google-workspace";
 import { requestedTaskSourceMode } from "@/lib/adapters/read-only/provider-selector";
+import { requestedAssetSourceMode, requestedDevelopmentSourceMode } from "@/lib/adapters/read-only/portfolio-provider-selector";
 import { taskDatabaseWritesEnabled } from "@/lib/db/authz";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,10 @@ export async function GET() {
     taskDatabaseConfigured: Boolean(process.env.DATABASE_URL?.trim()),
     taskDatabaseApproved: process.env.OPS_TASK_DB_APPROVED === "true",
     taskDatabaseWritesEnabled: taskDatabaseWritesEnabled(),
+    assetSourceRequested: requestedAssetSourceMode(),
+    assetDatabaseApproved: process.env.OPS_ASSET_DB_APPROVED === "true",
+    developmentSourceRequested: requestedDevelopmentSourceMode(),
+    developmentDatabaseApproved: process.env.OPS_DEVELOPMENT_DB_APPROVED === "true",
   }, {
     headers: { "Cache-Control": "no-store" },
   });
