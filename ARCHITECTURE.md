@@ -47,24 +47,26 @@
 
 ## PostgreSQL task application layer
 
-- PostgreSQL task reader/writer implemented and verified on `feature/postgres-task-store`.
+- PostgreSQL task reader/writer implemented and verified.
 - PostgreSQL activation is fail-closed. It requires `OPS_TASK_SOURCE=postgres`, `OPS_TASK_DB_APPROVED=true`, `DATABASE_URL`, an authenticated Workspace session and an exact allowed Workspace domain match.
-- Without every gate, the app falls back to the isolated mock source.
+- Task writes are independently fail-closed and additionally require `OPS_TASK_DB_WRITES_ENABLED=true`.
+- Without every read gate, the app falls back to the isolated mock source.
 - Task create/update APIs validate a whitelist of supported fields.
 - Task writes produce activity audit events.
 - Task updates/comments are stored separately in `task_updates`.
 - Real task values and database credentials are never committed to the public repository.
+- Safe authenticated runtime verifier available at `/api/verify/task-db`; it returns counts/ID coverage/migration status but no task content or credentials.
 
 ## Verification status
 
-Passed on Vercel Preview for the PostgreSQL branch:
+Passed on Vercel Preview and Production code builds:
 
 - `POSTGRES_TASK_STORE_VERIFICATION_OK`
 - `TASK_INPUT_VALIDATION_OK`
+- `TASK_DATABASE_WRITE_GATE_VERIFICATION_OK`
 - Next.js 16.3 compilation
 - TypeScript
-- route generation for `/api/tasks`, `/api/tasks/[id]`, `/api/tasks/[id]/updates`
-- Preview deployment READY
+- route generation for `/api/tasks`, `/api/tasks/[id]`, `/api/tasks/[id]/updates`, `/api/verify/task-db`
 
 Database verification passed:
 
@@ -79,14 +81,19 @@ Database verification passed:
 
 ## Current activation status
 
-The database is populated and verified, but Production remains fail-closed until runtime configuration is connected and tested. Required runtime gates:
+The database is populated and verified. The user configured the intended Production environment variables in Vercel on 07.08.2026; a fresh Production deployment is required before runtime verification can observe them.
+
+Intended Production values:
 
 ```env
 DATABASE_URL=<server-side Neon connection>
 GOOGLE_WORKSPACE_ALLOWED_DOMAIN=613investmentgroup.com
 OPS_TASK_SOURCE=postgres
 OPS_TASK_DB_APPROVED=true
+OPS_TASK_DB_WRITES_ENABLED=false
 ```
+
+Writes must remain disabled until the authenticated `/api/verify/task-db` check confirms 75/75 from Production and a controlled write test is explicitly approved.
 
 Do not commit `DATABASE_URL` or any database credential. Set it only as a server-side Vercel environment variable/integration value.
 
@@ -96,7 +103,9 @@ Do not commit `DATABASE_URL` or any database credential. Set it only as a server
 2. Inspect current GitHub `main` before changes.
 3. Existing production Sheets remain read-only and must not be modified.
 4. PostgreSQL contains the verified 75-task legacy migration and is the intended Task source of truth.
-5. PostgreSQL task code passed Preview verification and may be fast-forwarded to `main`; runtime stays mock until all DB gates are configured.
-6. After merge, connect `DATABASE_URL` in Vercel without exposing it, configure `GOOGLE_WORKSPACE_ALLOWED_DOMAIN=613investmentgroup.com`, request `OPS_TASK_SOURCE=postgres`, and explicitly set `OPS_TASK_DB_APPROVED=true` only for the runtime test.
-7. Redeploy, sign in with the 613 Workspace account, verify the Tasks UI reads PostgreSQL, and test one controlled task write with audit verification before declaring the Sheet transition complete.
-8. After PostgreSQL task activation is proven, remove the obsolete Google Sheets task scope/path from OAuth and retain Sheets adapters only for Assets/Development where still needed.
+5. PostgreSQL task code, independent write gate, and safe runtime verifier are on `main` and have passed Vercel builds.
+6. A documentation-only commit was used to trigger a fresh Production deployment after the user configured the Vercel Production DB variables.
+7. After that deployment is READY, check `/api/auth/status`: expected database configured=true, database approved=true, source=postgres, writes=false.
+8. Then sign in with the 613 Workspace account and run `/api/verify/task-db`; require 75/75 and no missing IDs before enabling any writes.
+9. Only after explicit approval, enable `OPS_TASK_DB_WRITES_ENABLED=true` and perform one controlled task write with audit verification.
+10. After PostgreSQL task activation is proven, remove the obsolete Google Sheets task scope/path from OAuth and retain Sheets adapters only for Assets/Development where still needed.
