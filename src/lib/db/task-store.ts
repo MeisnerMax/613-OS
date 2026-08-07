@@ -19,6 +19,7 @@ export type TaskCreateInput = {
 };
 
 export type TaskPatchInput = {
+  expectedVersion?: number;
   title?: string;
   asset?: string | null;
   category?: string | null;
@@ -41,15 +42,20 @@ type TaskRow = {
   id: string;
   title: string;
   property_project: string;
+  category: string | null;
   status: TaskStatus;
   priority: Priority;
   owner: string | null;
+  support: string | null;
+  info: string | null;
   waiting_for: string | null;
   waiting_since: string | null;
   deadline: string | null;
   next_step: string | null;
+  next_step_by: string | null;
   latest_progress: string | null;
   description: string;
+  version: number;
 };
 
 type UpdateRow = { task_id: string; body: string };
@@ -78,16 +84,22 @@ function mapRow(row: TaskRow, updates: string[]): Task {
     id: row.id,
     title: row.title,
     asset: row.property_project,
+    category: row.category ?? undefined,
     status: row.status,
     priority: row.priority,
     owner: row.owner ?? "",
+    support: row.support ?? undefined,
+    info: row.info ?? undefined,
     waitingFor: row.waiting_for ?? undefined,
+    waitingSince: row.waiting_since ?? undefined,
     waitingDays: daysSince(row.waiting_since),
     deadline: row.deadline ?? undefined,
     nextStep: row.next_step ?? undefined,
+    nextStepBy: row.next_step_by ?? undefined,
     description: row.description || row.latest_progress || "",
     flag: flagFor(row),
     updates,
+    version: Number(row.version),
   };
 }
 
@@ -114,14 +126,14 @@ function patchValue<T>(input: Record<string, unknown>, key: string, current: T):
 export class PostgresTaskStore {
   async listTasks(): Promise<ReadonlyArray<Task>> {
     const sql = taskDatabase();
-    const rows = await sql`SELECT id, title, property_project, status, priority, owner, waiting_for, waiting_since::text, deadline::text, next_step, latest_progress, description FROM tasks WHERE deleted_at IS NULL ORDER BY id` as TaskRow[];
+    const rows = await sql`SELECT id, title, property_project, category, status, priority, owner, support, info, waiting_for, waiting_since::text, deadline::text, next_step, next_step_by::text, latest_progress, description, version FROM tasks WHERE deleted_at IS NULL ORDER BY id` as TaskRow[];
     const grouped = await updatesByTask(rows.map((row) => row.id));
     return rows.map((row) => mapRow(row, grouped.get(row.id) ?? []));
   }
 
   async getTask(id: string): Promise<Task | null> {
     const sql = taskDatabase();
-    const rows = await sql`SELECT id, title, property_project, status, priority, owner, waiting_for, waiting_since::text, deadline::text, next_step, latest_progress, description FROM tasks WHERE id=${id} AND deleted_at IS NULL LIMIT 1` as TaskRow[];
+    const rows = await sql`SELECT id, title, property_project, category, status, priority, owner, support, info, waiting_for, waiting_since::text, deadline::text, next_step, next_step_by::text, latest_progress, description, version FROM tasks WHERE id=${id} AND deleted_at IS NULL LIMIT 1` as TaskRow[];
     if (!rows[0]) return null;
     const grouped = await updatesByTask([id]);
     return mapRow(rows[0], grouped.get(id) ?? []);
@@ -153,12 +165,13 @@ export class PostgresTaskStore {
     const sql = taskDatabase();
     const before = await this.getTask(id);
     if (!before) return null;
-    const currentRows = await sql`SELECT title, property_project, category, status, priority, owner, support, info, waiting_for, waiting_since::text, deadline::text, next_step, next_step_by::text, description FROM tasks WHERE id=${id} AND deleted_at IS NULL LIMIT 1` as Array<Record<string, unknown>>;
+    const currentRows = await sql`SELECT title, property_project, category, status, priority, owner, support, info, waiting_for, waiting_since::text, deadline::text, next_step, next_step_by::text, description, version FROM tasks WHERE id=${id} AND deleted_at IS NULL LIMIT 1` as Array<Record<string, unknown>>;
     const current = currentRows[0];
     if (!current) return null;
     const raw = input as Record<string, unknown>;
+    const expectedVersion = input.expectedVersion ?? null;
 
-    await sql`UPDATE tasks SET
+    const updatedRows = await sql`UPDATE tasks SET
       title = ${patchValue(raw, "title", current.title as string)},
       property_project = ${patchValue(raw, "asset", current.property_project as string) ?? ""},
       category = ${patchValue(raw, "category", current.category as string | null)},
@@ -174,7 +187,14 @@ export class PostgresTaskStore {
       next_step_by = ${patchValue(raw, "nextStepBy", current.next_step_by as string | null)},
       description = ${patchValue(raw, "description", current.description as string) ?? ""},
       updated_at = now(), version = version + 1
-      WHERE id=${id} AND deleted_at IS NULL`;
+      WHERE id=${id} AND deleted_at IS NULL AND (${expectedVersion}::integer IS NULL OR version = ${expectedVersion})
+      RETURNING version` as Array<{ version: number }>;
+
+    if (!updatedRows[0]) {
+      if (expectedVersion !== null) throw new Error("TASK_VERSION_CONFLICT");
+      return null;
+    }
+
     const after = await this.getTask(id);
     await sql`INSERT INTO activity_events (entity_id, action, actor_email, actor_name, before_state, after_state) VALUES (${id}, 'task.updated', ${actor.email ?? null}, ${actor.name ?? null}, ${JSON.stringify(before)}::jsonb, ${JSON.stringify(after)}::jsonb)`;
     return after;
