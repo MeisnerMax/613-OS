@@ -56,6 +56,7 @@
 - Task updates/comments are stored separately in `task_updates`.
 - Real task values and database credentials are never committed to the public repository.
 - Safe authenticated runtime verifier available at `/api/verify/task-db`; it returns counts/ID coverage/migration status but no task content or credentials.
+- Safe authenticated reversible write verifier available at `/verify/task-db-write` and POST `/api/verify/task-db-write`; it requires the write gate, refuses to run unless the active task baseline is exactly 75, creates only a temporary WEBAPP test task, verifies create/update/comment/audit, removes the test task and its test audit data, and requires the final active task count to return to 75.
 
 ## Verification status
 
@@ -66,7 +67,7 @@ Passed on Vercel Preview and Production code builds:
 - `TASK_DATABASE_WRITE_GATE_VERIFICATION_OK`
 - Next.js 16.3 compilation
 - TypeScript
-- route generation for `/api/tasks`, `/api/tasks/[id]`, `/api/tasks/[id]/updates`, `/api/verify/task-db`
+- route generation for `/api/tasks`, `/api/tasks/[id]`, `/api/tasks/[id]/updates`, `/api/verify/task-db`, `/api/verify/task-db-write`, `/verify/task-db-write`
 
 Database verification passed:
 
@@ -78,22 +79,21 @@ Database verification passed:
 - 43 legacy task updates
 - 75 legacy audit events
 - migration status completed
+- authenticated Production `/api/verify/task-db` returned `ok=true` with 75/75 and migration completed 75/75
 
 ## Current activation status
 
-The database is populated and verified. The user configured the intended Production environment variables in Vercel on 07.08.2026; a fresh Production deployment is required before runtime verification can observe them.
+PostgreSQL reads are active and fully verified in Production. The user explicitly approved task writes on 07.08.2026 and changed the Production Vercel variable `OPS_TASK_DB_WRITES_ENABLED` from `false` to `true`. A fresh Production deployment is being triggered so the runtime can consume that value. The first write must be the reversible authenticated write verifier; no real legacy task should be used for the activation test.
 
-Intended Production values:
+Expected Production values after the fresh deployment:
 
 ```env
 DATABASE_URL=<server-side Neon connection>
 GOOGLE_WORKSPACE_ALLOWED_DOMAIN=613investmentgroup.com
 OPS_TASK_SOURCE=postgres
 OPS_TASK_DB_APPROVED=true
-OPS_TASK_DB_WRITES_ENABLED=false
+OPS_TASK_DB_WRITES_ENABLED=true
 ```
-
-Writes must remain disabled until the authenticated `/api/verify/task-db` check confirms 75/75 from Production and a controlled write test is explicitly approved.
 
 Do not commit `DATABASE_URL` or any database credential. Set it only as a server-side Vercel environment variable/integration value.
 
@@ -102,10 +102,10 @@ Do not commit `DATABASE_URL` or any database credential. Set it only as a server
 1. Read the persistent Drive architecture document fully.
 2. Inspect current GitHub `main` before changes.
 3. Existing production Sheets remain read-only and must not be modified.
-4. PostgreSQL contains the verified 75-task legacy migration and is the intended Task source of truth.
-5. PostgreSQL task code, independent write gate, and safe runtime verifier are on `main` and have passed Vercel builds.
-6. A documentation-only commit was used to trigger a fresh Production deployment after the user configured the Vercel Production DB variables.
-7. After that deployment is READY, check `/api/auth/status`: expected database configured=true, database approved=true, source=postgres, writes=false.
-8. Then sign in with the 613 Workspace account and run `/api/verify/task-db`; require 75/75 and no missing IDs before enabling any writes.
-9. Only after explicit approval, enable `OPS_TASK_DB_WRITES_ENABLED=true` and perform one controlled task write with audit verification.
-10. After PostgreSQL task activation is proven, remove the obsolete Google Sheets task scope/path from OAuth and retain Sheets adapters only for Assets/Development where still needed.
+4. PostgreSQL contains the verified 75-task legacy migration and is the Task source of truth.
+5. PostgreSQL task code, independent write gate, safe read verifier and reversible write verifier are on `main` and have passed Vercel builds.
+6. Authenticated Production read verification is complete: 75/75 tasks and migration completed 75/75.
+7. User explicitly approved writes and set `OPS_TASK_DB_WRITES_ENABLED=true` for Production.
+8. After the activation deployment is READY, verify `/api/auth/status` shows `taskDatabaseWritesEnabled=true`.
+9. Then, from an authenticated 613 Workspace browser, open `/verify/task-db-write` and run exactly one reversible write verification. Require create/update/comment/audit/cleanup all true and baselineCount=finalCount=75.
+10. After that succeeds, task writes are operationally approved. Then remove obsolete Google Sheets task scope/path from OAuth while retaining Sheets adapters only for Assets/Development where still needed.
