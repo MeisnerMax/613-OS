@@ -94,6 +94,7 @@ export function parseTaskPatchInput(value: unknown): TaskPatchInput {
 export function apiErrorStatus(code: string) {
   if (code === "AUTH_REQUIRED") return 401;
   if (code === "WORKSPACE_DOMAIN_NOT_ALLOWED") return 403;
+  if (code === "DB_WRITES_DISABLED") return 503;
   if (code.startsWith("INVALID_") || code === "NO_SUPPORTED_FIELDS") return 400;
   return 500;
 }
