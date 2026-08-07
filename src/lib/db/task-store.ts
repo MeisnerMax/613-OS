@@ -54,6 +54,8 @@ type TaskRow = {
 
 type UpdateRow = { task_id: string; body: string };
 
+const TASK_ID_RETRY_LIMIT = 32;
+
 function daysSince(value: string | null): number | undefined {
   if (!value) return undefined;
   const start = new Date(`${value}T00:00:00Z`);
@@ -127,15 +129,22 @@ export class PostgresTaskStore {
 
   async createTask(input: TaskCreateInput, actor: Actor) {
     const sql = taskDatabase();
-    const rows = await sql`
-      WITH next_id AS (
-        SELECT 'TSK-' || LPAD((COALESCE(MAX(SUBSTRING(id FROM 5)::integer), 0) + 1)::text, 4, '0') AS id FROM tasks WHERE id ~ '^TSK-[0-9]+$'
-      )
-      INSERT INTO tasks (id, title, property_project, category, status, priority, owner, support, info, waiting_for, waiting_since, deadline, next_step, next_step_by, description, source_bucket)
-      SELECT id, ${input.title}, ${input.asset ?? ""}, ${input.category ?? null}, ${input.status ?? "Open"}, ${input.priority ?? "Medium"}, ${input.owner ?? null}, ${input.support ?? null}, ${input.info ?? null}, ${input.waitingFor ?? null}, ${input.waitingSince ?? null}, ${input.deadline ?? null}, ${input.nextStep ?? null}, ${input.nextStepBy ?? null}, ${input.description ?? ""}, 'WEBAPP' FROM next_id
-      RETURNING id` as Array<{ id: string }>;
-    const id = rows[0]?.id;
-    if (!id) throw new Error("TASK_CREATE_FAILED");
+    let id: string | undefined;
+
+    for (let attempt = 0; attempt < TASK_ID_RETRY_LIMIT; attempt += 1) {
+      const rows = await sql`
+        WITH next_id AS (
+          SELECT 'TSK-' || LPAD((COALESCE(MAX(SUBSTRING(id FROM 5)::integer), 0) + 1)::text, 4, '0') AS id FROM tasks WHERE id ~ '^TSK-[0-9]+$'
+        )
+        INSERT INTO tasks (id, title, property_project, category, status, priority, owner, support, info, waiting_for, waiting_since, deadline, next_step, next_step_by, description, source_bucket)
+        SELECT id, ${input.title}, ${input.asset ?? ""}, ${input.category ?? null}, ${input.status ?? "Open"}, ${input.priority ?? "Medium"}, ${input.owner ?? null}, ${input.support ?? null}, ${input.info ?? null}, ${input.waitingFor ?? null}, ${input.waitingSince ?? null}, ${input.deadline ?? null}, ${input.nextStep ?? null}, ${input.nextStepBy ?? null}, ${input.description ?? ""}, 'WEBAPP' FROM next_id
+        ON CONFLICT (id) DO NOTHING
+        RETURNING id` as Array<{ id: string }>;
+      id = rows[0]?.id;
+      if (id) break;
+    }
+
+    if (!id) throw new Error("TASK_ID_ALLOCATION_FAILED");
     await sql`INSERT INTO activity_events (entity_id, action, actor_email, actor_name, after_state) VALUES (${id}, 'task.created', ${actor.email ?? null}, ${actor.name ?? null}, ${JSON.stringify(input)}::jsonb)`;
     return this.getTask(id);
   }
