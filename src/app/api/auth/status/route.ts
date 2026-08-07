@@ -8,9 +8,12 @@ import { requestedTaskSourceMode } from "@/lib/adapters/read-only/provider-selec
 
 export async function GET() {
   const session = await getGoogleWorkspaceSession();
-  const { allowedDomain } = getGoogleOAuthConfig();
+  const { clientId, clientSecret, allowedDomain } = getGoogleOAuthConfig();
+
   return NextResponse.json({
     oauthConfigured: isGoogleOAuthConfigured(),
+    clientIdConfigured: Boolean(clientId),
+    clientSecretConfigured: Boolean(clientSecret),
     authenticated: session.authenticated,
     email: session.email ?? null,
     hostedDomain: session.hostedDomain ?? null,
