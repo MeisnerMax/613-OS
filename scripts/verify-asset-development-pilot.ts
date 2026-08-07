@@ -12,6 +12,7 @@ const selector = readFileSync(join(root, "src/lib/adapters/read-only/portfolio-p
 const migration = readFileSync(join(root, "migrations/0002_asset_development_pilot.sql"), "utf8");
 const projectDetailPage = readFileSync(join(root, "src/app/projects/[id]/page.tsx"), "utf8");
 const assetsPage = readFileSync(join(root, "src/app/assets/page.tsx"), "utf8");
+const assetsStyles = readFileSync(join(root, "src/app/assets/assets.css"), "utf8");
 const assetDetailPage = readFileSync(join(root, "src/app/assets/[id]/page.tsx"), "utf8");
 
 const oldAssetSource = process.env.OPS_ASSET_SOURCE;
@@ -45,6 +46,9 @@ assert(projectDetailPage.includes("getProjectWorkPackages"), "Project work-packa
 assert(projectDetailPage.includes("packages.map"), "Project work-package table is missing.");
 assert(assetsPage.includes("Direct open tasks"), "Asset task metric must disclose direct-only linkage.");
 assert(assetsPage.includes("Migrated projects"), "Asset project metric must disclose staged migration scope.");
+assert(assetsPage.includes('a.status === "Sold" ? "sold"'), "Sold Assets need a distinct visual state.");
+assert(assetsStyles.includes(".assetStatus.sold"), "Sold Asset styling is missing.");
+assert(assetsStyles.includes(".openAsset{display:flex"), "Asset detail link layout is missing.");
 assert(assetDetailPage.includes("getAssetById"), "Asset detail read path is missing.");
 assert(assetDetailPage.includes("Financial snapshot"), "Asset financial snapshot section is missing.");
 assert(assetDetailPage.includes("No source Sheet is modified"), "Asset detail must retain the read-only source disclosure.");
