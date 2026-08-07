@@ -5,7 +5,7 @@
   "description": "Internal operations workspace for 613 Investment Group",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run verify:read-only && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "verify:read-only": "tsx scripts/verify-read-only-adapters.ts && tsx scripts/verify-google-sheets-reader.ts && tsx scripts/verify-google-sheets-operational-readers.ts && tsx scripts/verify-provider-selector.ts && tsx scripts/verify-google-oauth-validation.ts && tsx scripts/verify-my-work.ts",
