@@ -7,6 +7,8 @@ import {
 import { requestedTaskSourceMode } from "@/lib/adapters/read-only/provider-selector";
 import { taskDatabaseWritesEnabled } from "@/lib/db/authz";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const session = await getGoogleWorkspaceSession();
   const { clientId, clientSecret, allowedDomain } = getGoogleOAuthConfig();
@@ -25,5 +27,7 @@ export async function GET() {
     taskDatabaseConfigured: Boolean(process.env.DATABASE_URL?.trim()),
     taskDatabaseApproved: process.env.OPS_TASK_DB_APPROVED === "true",
     taskDatabaseWritesEnabled: taskDatabaseWritesEnabled(),
+  }, {
+    headers: { "Cache-Control": "no-store" },
   });
 }
