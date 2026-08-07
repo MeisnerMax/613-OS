@@ -20,7 +20,9 @@ export async function POST() {
   try {
     const session = await require613WorkspaceSession();
     requireTaskDatabaseWritesEnabled();
-    actorEmail = session.email;
+    if (!session.email) throw new Error("SESSION_EMAIL_REQUIRED");
+    const email = session.email;
+    actorEmail = email;
     startedAt = new Date().toISOString();
 
     const sql = taskDatabase();
@@ -48,17 +50,17 @@ export async function POST() {
       category: "System",
       status: "Open",
       priority: "Low",
-      owner: session.email,
+      owner: email,
       description: "Temporary task. Automatically removed after verification.",
-    }, { email: session.email });
+    }, { email });
 
     if (!created) throw new Error("WRITE_PROBE_CREATE_FAILED");
     testId = created.id;
 
-    const updated = await store.updateTask(testId, { description: marker }, { email: session.email });
+    const updated = await store.updateTask(testId, { description: marker }, { email });
     if (!updated || updated.description !== marker) throw new Error("WRITE_PROBE_UPDATE_FAILED");
 
-    const withUpdate = await store.addUpdate(testId, updateBody, { email: session.email });
+    const withUpdate = await store.addUpdate(testId, updateBody, { email });
     if (!withUpdate || !withUpdate.updates.includes(updateBody)) throw new Error("WRITE_PROBE_COMMENT_FAILED");
 
     const auditRows = await sql.query(
@@ -66,7 +68,7 @@ export async function POST() {
        FROM activity_events
        WHERE entity_id = $1 AND actor_email = $2 AND created_at >= $3::timestamptz
        GROUP BY action`,
-      [testId, session.email, startedAt],
+      [testId, email, startedAt],
     ) as Array<{ action: string; count: number | string }>;
 
     const auditCounts = new Map(auditRows.map((row) => [row.action, Number(row.count)]));
@@ -86,7 +88,7 @@ export async function POST() {
     await sql`DELETE FROM tasks WHERE id=${testId} AND source_bucket='WEBAPP'`;
     await sql.query(
       "DELETE FROM activity_events WHERE entity_id = $1 AND actor_email = $2 AND created_at >= $3::timestamptz",
-      [testId, session.email, startedAt],
+      [testId, email, startedAt],
     );
 
     const finalRows = await sql`SELECT COUNT(*)::int AS count FROM tasks WHERE deleted_at IS NULL` as Array<{ count: number | string }>;
@@ -136,7 +138,7 @@ export async function POST() {
       }
     }
 
-    const status = code === "AUTH_REQUIRED"
+    const status = code === "AUTH_REQUIRED" || code === "SESSION_EMAIL_REQUIRED"
       ? 401
       : code === "WORKSPACE_DOMAIN_NOT_ALLOWED"
         ? 403
