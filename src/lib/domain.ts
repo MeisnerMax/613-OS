@@ -72,5 +72,5 @@ export type PortfolioSnapshot = {
   assets: Asset[];
   projects: Project[];
   overview: OperationalOverview;
-  sourceMode: "mock-read-only" | "google-sheets-read-only";
+  sourceMode: "mock-read-only" | "google-sheets-read-only" | "postgres";
 };
