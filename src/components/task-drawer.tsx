@@ -86,6 +86,7 @@ export function TaskDrawer({ task, creating = false, onClose, onTaskChanged }: P
   const [updateBody, setUpdateBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [conflictTask, setConflictTask] = useState<Task | null>(null);
 
   useEffect(() => {
     const next = task ? draftFromTask(task) : emptyDraft;
@@ -94,6 +95,7 @@ export function TaskDrawer({ task, creating = false, onClose, onTaskChanged }: P
     setUpdateBody("");
     setError(null);
     setNotice(null);
+    setConflictTask(null);
   }, [task, creating]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== baseline, [draft, baseline]);
@@ -110,15 +112,30 @@ export function TaskDrawer({ task, creating = false, onClose, onTaskChanged }: P
     onClose();
   }
 
-  async function loadLatestAfterConflict(id: string) {
+  async function fetchLatestTask(id: string): Promise<Task | null> {
     const response = await fetch(`/api/tasks/${encodeURIComponent(id)}`, { cache: "no-store" });
     const data = await readJson(response);
-    if (response.ok && data.task) onTaskChanged(data.task);
+    return response.ok && data.task ? data.task : null;
+  }
+
+  function reloadConflict() {
+    if (!conflictTask) return;
+    const latest = conflictTask;
+    const next = draftFromTask(latest);
+    setDraft(next);
+    setBaseline(JSON.stringify(next));
+    setConflictTask(null);
+    setError(null);
+    onTaskChanged(latest);
   }
 
   async function saveTask() {
     if (!draft.title.trim()) {
       setError("Title is required.");
+      return;
+    }
+    if (conflictTask) {
+      setError("Reload the latest task version before saving again.");
       return;
     }
 
@@ -170,8 +187,13 @@ export function TaskDrawer({ task, creating = false, onClose, onTaskChanged }: P
       const data = await readJson(response);
 
       if (response.status === 409 && task) {
-        await loadLatestAfterConflict(task.id);
-        setError("This task was changed by someone else. The latest version has been loaded; review it before saving again.");
+        const latest = await fetchLatestTask(task.id);
+        if (latest) {
+          setConflictTask(latest);
+          setError("This task changed after you opened it. Your unsaved changes are still here. Review them, then choose Reload latest before editing again.");
+        } else {
+          setError("This task changed after you opened it, and the latest version could not be loaded.");
+        }
         return;
       }
       if (!response.ok || !data.task) throw new Error(data.error || `SAVE_FAILED_${response.status}`);
@@ -189,7 +211,7 @@ export function TaskDrawer({ task, creating = false, onClose, onTaskChanged }: P
   }
 
   async function addUpdate() {
-    if (!task || !updateBody.trim()) return;
+    if (!task || !updateBody.trim() || dirty) return;
     setUpdateBusy(true);
     setError(null);
     setNotice(null);
@@ -239,18 +261,20 @@ export function TaskDrawer({ task, creating = false, onClose, onTaskChanged }: P
       </div>
 
       {error ? <div className="taskMessage error">{error}</div> : null}
+      {conflictTask ? <div className="taskConflict"><span>Server version v{conflictTask.version ?? "—"} is newer.</span><button className="secondaryAction" onClick={reloadConflict}>Reload latest</button></div> : null}
       {notice ? <div className="taskMessage success">{notice}</div> : null}
 
       <div className="taskFormActions">
         <button className="secondaryAction" onClick={requestClose} disabled={busy}>Cancel</button>
-        <button className="primaryAction" onClick={saveTask} disabled={busy || (!creating && !dirty)}>{busy ? "Saving…" : creating ? "Create task" : dirty ? "Save changes" : "Saved"}</button>
+        <button className="primaryAction" onClick={saveTask} disabled={busy || Boolean(conflictTask) || (!creating && !dirty)}>{busy ? "Saving…" : creating ? "Create task" : conflictTask ? "Resolve conflict" : dirty ? "Save changes" : "Saved"}</button>
       </div>
 
       {!creating && task ? <section className="drawerSection taskActivitySection">
         <span>Activity / updates</span>
         <div className="taskUpdateComposer">
           <textarea value={updateBody} onChange={(event) => setUpdateBody(event.target.value)} placeholder="Add progress, decision or note…" rows={3} />
-          <button className="secondaryAction" onClick={addUpdate} disabled={updateBusy || !updateBody.trim()}>{updateBusy ? "Adding…" : "Add update"}</button>
+          {dirty ? <small>Save or discard field changes before adding an update.</small> : null}
+          <button className="secondaryAction" onClick={addUpdate} disabled={updateBusy || !updateBody.trim() || dirty}>{updateBusy ? "Adding…" : "Add update"}</button>
         </div>
         {task.updates.length ? task.updates.map((update, index) => <p className="activity" key={`${index}-${update}`}>{update}</p>) : <p className="muted">No updates yet.</p>}
       </section> : null}
