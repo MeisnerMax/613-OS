@@ -17,11 +17,16 @@ assert(table.includes("onTaskChanged"), "Task table does not receive saved task 
 assert(drawer.includes('method: creating ? "POST" : "PATCH"'), "Task create/edit API wiring is missing.");
 assert(drawer.includes("expectedVersion: task?.version"), "Task edit UI must send optimistic version.");
 assert(drawer.includes("response.status === 409"), "Task edit UI must handle version conflicts.");
+assert(drawer.includes("Your unsaved changes are still here"), "Version conflicts must preserve unsaved edits.");
+assert(drawer.includes("Reload latest"), "Version conflicts need an explicit reload action.");
+assert(drawer.includes("!updateBody.trim() || dirty"), "Updates must not discard unsaved field edits.");
 assert(drawer.includes("/updates"), "Task update/comment API wiring is missing.");
 assert(drawer.includes("Waiting since"), "Waiting workflow fields are missing.");
 assert(drawer.includes("Next step by"), "Next-step deadline field is missing.");
 assert(store.includes("version = version + 1"), "Task version increment is missing.");
 assert(store.includes("TASK_VERSION_CONFLICT"), "Task store version conflict guard is missing.");
+assert(store.includes("description: row.description"), "Cleared descriptions must not fall back to legacy progress.");
 assert(input.includes('apiErrorStatus("TASK_VERSION_CONFLICT")') || input.includes('code === "TASK_VERSION_CONFLICT"'), "Task version conflicts must map to HTTP 409.");
 assert(styles.includes(".taskForm"), "Task CRUD form styles are missing.");
+assert(styles.includes(".taskConflict"), "Task conflict styles are missing.");
 console.log("TASK_CRUD_UI_VERIFICATION_OK");
