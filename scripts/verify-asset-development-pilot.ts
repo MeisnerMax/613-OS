@@ -10,7 +10,9 @@ const root = process.cwd();
 const store = readFileSync(join(root, "src/lib/db/asset-development-store.ts"), "utf8");
 const selector = readFileSync(join(root, "src/lib/adapters/read-only/portfolio-provider-selector.ts"), "utf8");
 const migration = readFileSync(join(root, "migrations/0002_asset_development_pilot.sql"), "utf8");
-const detailPage = readFileSync(join(root, "src/app/projects/[id]/page.tsx"), "utf8");
+const projectDetailPage = readFileSync(join(root, "src/app/projects/[id]/page.tsx"), "utf8");
+const assetsPage = readFileSync(join(root, "src/app/assets/page.tsx"), "utf8");
+const assetDetailPage = readFileSync(join(root, "src/app/assets/[id]/page.tsx"), "utf8");
 
 const oldAssetSource = process.env.OPS_ASSET_SOURCE;
 const oldDevelopmentSource = process.env.OPS_DEVELOPMENT_SOURCE;
@@ -31,14 +33,20 @@ assert(selector.includes("getGoogleWorkspaceSession"), "Workspace session gate i
 assert(selector.includes("allowedDomain"), "Workspace domain gate is missing.");
 
 assert(store.includes("SELECT a.id"), "Asset database read is missing.");
+assert(store.includes("a.market_value_2026"), "Full Asset Master snapshot fields are not exposed.");
 assert(store.includes("FROM development_work_packages"), "Development work-package database read is missing.");
 assert(!/\b(INSERT|UPDATE|DELETE|TRUNCATE)\b/i.test(store), "Asset/development runtime store must remain read-only in the pilot.");
 
 for (const table of ["assets", "development_projects", "development_work_packages"]) {
   assert(migration.includes(`CREATE TABLE ${table}`), `Missing ${table} schema.`);
 }
-assert(detailPage.includes("getDevelopmentProjectDetail"), "Project detail metadata read is missing.");
-assert(detailPage.includes("getProjectWorkPackages"), "Project work-package read is missing.");
-assert(detailPage.includes("packages.map"), "Project work-package table is missing.");
+assert(projectDetailPage.includes("getDevelopmentProjectDetail"), "Project detail metadata read is missing.");
+assert(projectDetailPage.includes("getProjectWorkPackages"), "Project work-package read is missing.");
+assert(projectDetailPage.includes("packages.map"), "Project work-package table is missing.");
+assert(assetsPage.includes("Direct open tasks"), "Asset task metric must disclose direct-only linkage.");
+assert(assetsPage.includes("Migrated projects"), "Asset project metric must disclose staged migration scope.");
+assert(assetDetailPage.includes("getAssetById"), "Asset detail read path is missing.");
+assert(assetDetailPage.includes("Financial snapshot"), "Asset financial snapshot section is missing.");
+assert(assetDetailPage.includes("No source Sheet is modified"), "Asset detail must retain the read-only source disclosure.");
 
 console.log("ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK");
