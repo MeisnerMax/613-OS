@@ -16,7 +16,7 @@
 ## Target architecture
 
 - Frontend: Next.js App Router + React + TypeScript.
-- Tasks: PostgreSQL is the new operative source of truth after one-time migration from `Task_Overview_613Group`.
+- Tasks: PostgreSQL is the operative source of truth after one-time migration from `Task_Overview_613Group`.
 - Asset/financial and Development sources remain read-only Google Sheets during transition.
 - Drive: document storage by reference.
 - Calendar: actual meetings, inspections, deadlines and milestones; long project timelines stay in Gantt.
@@ -26,7 +26,7 @@
 ## Source-of-truth rules
 
 - Asset/financial: `Asset_Overview_v4` remains transition source of truth.
-- Tasks: PostgreSQL is the operative target source. `Task_Overview_613Group` is frozen historical migration input only and receives no writeback.
+- Tasks: PostgreSQL is the operative source. `Task_Overview_613Group` is frozen historical migration input only and receives no writeback.
 - Development: `Development_Projects_DE` remains transition source of truth.
 - No 613 OS transition adapter may write back to existing production Sheets.
 
@@ -69,7 +69,7 @@ Passed on Vercel Preview and Production code builds:
 - TypeScript
 - route generation for `/api/tasks`, `/api/tasks/[id]`, `/api/tasks/[id]/updates`, `/api/verify/task-db`, `/api/verify/task-db-write`, `/verify/task-db-write`
 
-Database verification passed:
+Database/runtime verification passed:
 
 - 75 total tasks
 - 44 DATA / 31 ARCHIVE
@@ -78,14 +78,16 @@ Database verification passed:
 - normalized DB checksum equals source snapshot checksum
 - 43 legacy task updates
 - 75 legacy audit events
-- migration status completed
-- authenticated Production `/api/verify/task-db` returned `ok=true` with 75/75 and migration completed 75/75
+- migration status completed 75/75
+- authenticated Production `/api/verify/task-db` returned `ok=true`
+- Production runtime reports `taskDatabaseWritesEnabled=true`
+- reversible write probe used temporary `TSK-0076` and passed create/update/taskUpdate/auditTrail/cleanup
+- write probe baselineCount=75 and finalCount=75
+- direct Neon post-test check: TSK-0076 task rows=0, task_updates=0, activity_events=0, active WEBAPP test tasks=0
 
 ## Current activation status
 
-PostgreSQL reads are active and fully verified in Production. The user explicitly approved task writes on 07.08.2026 and changed the Production Vercel variable `OPS_TASK_DB_WRITES_ENABLED` from `false` to `true`. A fresh Production deployment is being triggered so the runtime can consume that value. The first write must be the reversible authenticated write verifier; no real legacy task should be used for the activation test.
-
-Expected Production values after the fresh deployment:
+PostgreSQL Task reads and writes are now production-verified and operationally approved. Production uses:
 
 ```env
 DATABASE_URL=<server-side Neon connection>
@@ -95,17 +97,19 @@ OPS_TASK_DB_APPROVED=true
 OPS_TASK_DB_WRITES_ENABLED=true
 ```
 
-Do not commit `DATABASE_URL` or any database credential. Set it only as a server-side Vercel environment variable/integration value.
+The original Task Sheet remains historical/read-only migration input and receives no writeback. Do not commit `DATABASE_URL` or any database credential.
+
+Before broad user-facing CRUD rollout, address two hardening items already identified during review: make Task ID allocation concurrency-safe instead of relying on `MAX(id)+1`, and make session-derived status responses explicitly `Cache-Control: no-store`. Then wire create/edit/update UX against the verified PostgreSQL APIs.
 
 ## Handoff
 
 1. Read the persistent Drive architecture document fully.
 2. Inspect current GitHub `main` before changes.
 3. Existing production Sheets remain read-only and must not be modified.
-4. PostgreSQL contains the verified 75-task legacy migration and is the Task source of truth.
-5. PostgreSQL task code, independent write gate, safe read verifier and reversible write verifier are on `main` and have passed Vercel builds.
-6. Authenticated Production read verification is complete: 75/75 tasks and migration completed 75/75.
-7. User explicitly approved writes and set `OPS_TASK_DB_WRITES_ENABLED=true` for Production.
-8. After the activation deployment is READY, verify `/api/auth/status` shows `taskDatabaseWritesEnabled=true`.
-9. Then, from an authenticated 613 Workspace browser, open `/verify/task-db-write` and run exactly one reversible write verification. Require create/update/comment/audit/cleanup all true and baselineCount=finalCount=75.
-10. After that succeeds, task writes are operationally approved. Then remove obsolete Google Sheets task scope/path from OAuth while retaining Sheets adapters only for Assets/Development where still needed.
+4. PostgreSQL contains the verified 75-task legacy migration and is the operative Task source of truth.
+5. Authenticated Production read verification is complete: 75/75 tasks and migration completed 75/75.
+6. User explicitly approved writes; Production runtime has `OPS_TASK_DB_WRITES_ENABLED=true`.
+7. Reversible Production write verification passed completely using temporary TSK-0076, and direct Neon verification confirmed zero test residue and final task count 75.
+8. Task read/write backend is production-verified. Do not revert to Sheets synchronization or writeback.
+9. Next checked engineering step: concurrency-safe Task ID allocation plus `no-store` hardening for session-derived status responses, tested on a feature branch before main.
+10. After that, wire the user-facing Task CRUD UI (create/edit/status/owner/deadline/waiting/next step/update history) to the verified APIs, then continue Asset/Development transition work separately.
