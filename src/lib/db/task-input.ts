@@ -30,6 +30,13 @@ function dateValue(record: JsonRecord, key: string): string | null | undefined {
   return value;
 }
 
+function positiveIntegerValue(record: JsonRecord, key: string): number | undefined {
+  if (!(key in record)) return undefined;
+  const value = record[key];
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) throw new Error(`INVALID_${key.toUpperCase()}`);
+  return value;
+}
+
 function statusValue(record: JsonRecord): TaskStatus | undefined {
   const value = stringValue(record, "status");
   if (value === undefined) return undefined;
@@ -69,6 +76,7 @@ export function parseTaskCreateInput(value: unknown): TaskCreateInput {
 export function parseTaskPatchInput(value: unknown): TaskPatchInput {
   const record = asRecord(value);
   const input: TaskPatchInput = {};
+  const expectedVersion = positiveIntegerValue(record, "expectedVersion"); if (expectedVersion !== undefined) input.expectedVersion = expectedVersion;
   const title = stringValue(record, "title");
   if (title !== undefined) {
     if (!title) throw new Error("INVALID_TITLE");
@@ -87,13 +95,14 @@ export function parseTaskPatchInput(value: unknown): TaskPatchInput {
   const nextStep = stringValue(record, "nextStep", { nullable: true }); if (nextStep !== undefined) input.nextStep = nextStep;
   const nextStepBy = dateValue(record, "nextStepBy"); if (nextStepBy !== undefined) input.nextStepBy = nextStepBy;
   const description = stringValue(record, "description", { nullable: true }); if (description !== undefined) input.description = description;
-  if (Object.keys(input).length === 0) throw new Error("NO_SUPPORTED_FIELDS");
+  if (!Object.keys(input).some((key) => key !== "expectedVersion")) throw new Error("NO_SUPPORTED_FIELDS");
   return input;
 }
 
 export function apiErrorStatus(code: string) {
   if (code === "AUTH_REQUIRED") return 401;
   if (code === "WORKSPACE_DOMAIN_NOT_ALLOWED") return 403;
+  if (code === "TASK_VERSION_CONFLICT") return 409;
   if (code === "DB_WRITES_DISABLED") return 503;
   if (code.startsWith("INVALID_") || code === "NO_SUPPORTED_FIELDS") return 400;
   return 500;
