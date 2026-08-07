@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PostgresTaskStore } from "@/lib/db/task-store";
-import { require613WorkspaceSession } from "@/lib/db/authz";
+import { require613WorkspaceSession, requireTaskDatabaseWritesEnabled } from "@/lib/db/authz";
 import { apiErrorStatus, parseTaskCreateInput } from "@/lib/db/task-input";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +22,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await require613WorkspaceSession();
+    requireTaskDatabaseWritesEnabled();
     const input = parseTaskCreateInput(await request.json());
     const task = await new PostgresTaskStore().createTask(input, { email: session.email });
     return NextResponse.json({ task }, { status: 201 });
