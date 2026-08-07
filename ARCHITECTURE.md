@@ -50,59 +50,85 @@ No 613 OS transition adapter may write back to these sources.
 
 ## Current implementation status
 
-- New Drive folder `613 OS`: created.
-- Persistent Drive architecture document: created and maintained.
-- Dedicated GitHub repository: `MeisnerMax/613-OS`, default branch `main`.
-- GitHub repository is public; real `.env`, `.env.local` and `.env.*.local` files are excluded by `.gitignore` and must never be committed.
-- Vercel project: `613-os`, Git integration connected to `MeisnerMax/613-OS` branch `main`.
-- Production URL: `https://613-os.vercel.app`.
-- `vercel.json` explicitly sets the `nextjs` framework preset; this replaced the stale Vercel `public` output-directory behavior from the initially empty project.
-- Current app slice: Home, My Work, Tasks, Assets and Projects routed through read-only contracts.
+- Persistent Drive architecture document exists and is maintained.
+- GitHub repository: `MeisnerMax/613-OS`, default branch `main`.
+- Repository is public; real `.env`, `.env.local` and `.env.*.local` files are excluded by `.gitignore` and must never be committed.
+- Vercel project: `613-os`; Production URL: `https://613-os.vercel.app`.
+- `vercel.json` explicitly sets the `nextjs` framework preset.
+- Current production app slice: Home, My Work, Tasks, Assets and Projects.
 - Exact Sheet source contracts are documented in `SOURCE_CONTRACTS.md`.
-- Transition adapter API exposes read methods only; no production Sheet write method exists.
-- Real Google Sheets REST task reader uses HTTP GET only and requires `https://www.googleapis.com/auth/spreadsheets.readonly`.
+- Transition adapters expose read methods only; no production Sheet write method exists.
+- Google Sheets REST client uses HTTP GET only and requires `https://www.googleapis.com/auth/spreadsheets.readonly`.
 - Google Workspace OAuth uses Authorization Code + PKCE, short-lived access only (`access_type=online`), HTTP-only cookies and no persisted refresh token.
-- v0.5 hardening: granted OAuth scopes are validated; `spreadsheets.readonly` is required and a broader Sheets scope is explicitly rejected.
-- v0.5 hardening: Google identity requires `sub`, `email_verified=true` and, when configured, an exact Google Workspace hosted-domain (`hd`) match. Email-domain suffix matching is not used as the Workspace trust decision.
-- Stable Google `sub`, email and hosted domain are stored in short-lived HTTP-only session cookies alongside the access token.
+- Granted OAuth scopes are validated; `spreadsheets.readonly` is required and broader Sheets permission is rejected.
+- Google identity requires `sub`, `email_verified=true` and, when configured, an exact Google Workspace hosted-domain (`hd`) match.
 - OAuth transient state/PKCE cookies are cleared on completed/error callback paths.
-- `/api/auth/status` exposes only safe connection/gate status and never the access token or OAuth client secret.
-- `/tasks` shows Google Workspace connection state and keeps the live source visibly locked until all gates pass.
-- Server-side live Task provider requires all of: `OPS_TASK_SOURCE=google-sheets-read-only`, `OPS_ALLOW_LIVE_TASK_DISPLAY=true`, `OPS_TASK_PARITY_APPROVED=true`, authenticated Google Workspace session. Otherwise it falls back to `mock-read-only`.
-- Task source parity remains: 44 populated `DATA` records; 32 active Max-owned tasks; `MY TASKS` contains the same 32 IDs.
+- `/api/auth/status` exposes only safe connection/gate status and never tokens or secrets.
+- Task live provider remains protected by source, display, parity and authenticated-session gates.
+- Task source parity baseline remains: 44 populated `DATA` records; 32 active Max-owned tasks; `MY TASKS` contains the same 32 IDs.
 - `My Work` filters by configured owner and excludes `Done` tasks.
-- OAuth setup and safe activation instructions are in `OAUTH_SETUP.md`.
-- A real Google OAuth Web client has been created by the user. Its values are intentionally not stored in GitHub or the persistent snapshot. They must be stored only as runtime environment variables.
 
-## Verification status v0.5 + deployment
+## OAuth runtime status
 
-Passed:
+- Real Google OAuth Web client exists; credentials are stored only in Vercel Environment Variables, not in source control.
+- Production runtime now reports both OAuth variables present and `oauthConfigured=true`.
+- OAuth start endpoint returns the expected Google authorization redirect with PKCE/S256 and `spreadsheets.readonly`.
+- The previously incorrect Client-ID placeholder was corrected; Google now receives the actual OAuth Client ID rather than the secret.
+- Production redirect URI used by the app is exactly `https://613-os.vercel.app/api/auth/google/callback`.
+- The user has added that exact URI under Google Cloud `Authorized redirect URIs`; Google notes propagation can take from minutes to several hours.
+- Interactive OAuth sign-in is not yet marked complete. The last observed Google result before adding the URI was `400 redirect_uri_mismatch`; retry after propagation is required.
 
-- `NO_WRITE_METHODS_FOUND`
-- `TYPESCRIPT_PARSE_OK files=37`
+## Feature branch: read-only Assets + Hotel 57
+
+Branch: `feature/read-only-assets-hotel57`
+
+Implemented without changing any production Sheet:
+
+- `GoogleSheetsAssetReader` reads `Asset_Overview_v4` → `Asset_Master` using the existing read-only Sheets client.
+- `GoogleSheetsDevelopmentWorkPackageReader` reads the Hotel 57 pilot tab `004_Hotel_57` only for `PRJ-0001`; unknown project IDs do not trigger a Sheet request.
+- New tokenless verification fixture covers the live source shapes for `Asset_Master` and Hotel 57, including header-row normalization, German priorities, duration, calendar flag and plan offset.
+- New live parity commands are prepared for post-login use:
+  - `npm run verify:asset-parity`
+  - `npm run verify:hotel57-parity`
+- Both parity commands require only a short-lived `GOOGLE_SHEETS_ACCESS_TOKEN` carrying `spreadsheets.readonly`.
+- The feature-branch build now runs `npm run verify:read-only` before `next build`.
+- No Asset or Development live data has been wired into Production UI yet; no new live-display gate has been enabled.
+
+## Source observations checked read-only on 2026-08-07
+
+- `Asset_Master` header row is 3 and currently exposes 19 populated asset rows in the checked range.
+- Current status distribution observed in `Asset_Master`: 9 Active, 8 Under examination, 2 Sold.
+- Hotel 57 development tab header row is 9 and the checked live rows match the documented 15-column contract.
+- Current Hotel 57 rows include active work packages such as ID 7 `3D-Aufmaß des Bestands`, ID 8 `Fotos und Raumbuch`, and ID 9 `Denkmal-Bestand bewerten`.
+- These observations were read only through the connected Google Drive/Sheets interface; no source values were edited.
+
+## Verification status
+
+Production/OAuth checks already passed:
+
+- Vercel Production build and routing are healthy.
+- `https://613-os.vercel.app` returns HTTP 200.
+- Production `/api/auth/status` reports `oauthConfigured=true`, `clientIdConfigured=true`, `clientSecretConfigured=true`.
+- OAuth start endpoint returns HTTP 307 to Google with the correct Client ID, redirect URI, PKCE challenge and `spreadsheets.readonly` scope.
+
+Feature-branch Preview commit `44edc905933927148bc78adfc29e1c310e5fe737` passed before the later parity-script-only additions:
+
 - `READ_ONLY_ADAPTER_VERIFICATION_OK`
 - `GOOGLE_SHEETS_READONLY_READER_VERIFICATION_OK`
+- `GOOGLE_SHEETS_OPERATIONAL_READERS_VERIFICATION_OK`
 - `PROVIDER_SELECTOR_AND_AUTH_VERIFICATION_OK`
 - `GOOGLE_OAUTH_VALIDATION_OK`
 - `MY_WORK_OWNER_FILTER_VERIFICATION_OK`
-- Static preview JavaScript syntax check passed.
-- GitHub readback confirms application source is present on `main` and `.env.local` is absent.
-- Vercel production build for commit `f065ab6f91db9272ee9d85786b0450fe32b259d1` passed dependency installation, Next.js compilation, TypeScript, page-data collection and route generation.
-- Vercel generated the expected dynamic OAuth/API routes and static application routes.
-- Production deployment reached `READY` with no alias error.
-- `https://613-os.vercel.app` returns HTTP 200 with the 613 OS application.
-- `https://613-os.vercel.app/api/auth/status` returns HTTP 200 and currently reports `oauthConfigured=false`, `authenticated=false`, `taskSourceRequested=mock-read-only`, `taskParityApproved=false`, `liveTaskDisplayEnabled=false`.
+- Next.js compilation passed.
+- TypeScript passed.
+- Static/dynamic routes generated successfully.
+- Vercel Preview reached `READY` with no alias error.
 
-Still to verify:
-
-- Vercel runtime OAuth configuration: `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` must be entered in Vercel Environment Variables. The current connector exposes no environment-variable write action, so this cannot be set programmatically from the current session.
-- Google Cloud must authorize the exact production redirect URI `https://613-os.vercel.app/api/auth/google/callback`.
-- Google OAuth end-to-end sign-in must then be completed interactively by an allowed Google user.
-- After login, Task live parity must be run with a short-lived `spreadsheets.readonly` token before any live display gate is enabled.
+The latest branch commits adding the live Asset/Hotel57 parity scripts must also finish their automatic Preview build before merge consideration.
 
 ## Live activation status
 
-Live Task display remains deliberately locked:
+Task live display remains deliberately locked unless all existing gates are explicitly enabled after successful interactive auth + parity:
 
 ```env
 OPS_TASK_SOURCE=mock-read-only
@@ -110,7 +136,7 @@ OPS_ALLOW_LIVE_TASK_DISPLAY=false
 OPS_TASK_PARITY_APPROVED=false
 ```
 
-Do not change those values merely because source-level parity or the production build passed. First complete the OAuth/runtime checks in `OAUTH_SETUP.md`.
+Do not enable live Assets or Development merely because their readers compile. First complete authenticated live parity and decide the Asset task/project-count join strategy before exposing Asset rows in the UI.
 
 ## Handoff
 
@@ -119,12 +145,13 @@ When continuing in a new chat:
 1. Read the persistent Drive architecture document fully.
 2. Inspect the full current 613 OS code before changing anything.
 3. Verify current implementation state.
-4. Produce a checked plan for the next work step.
-5. Keep all current production sources untouched unless Max explicitly authorizes a specific write.
-6. Run available checks and update architecture after structural changes.
-7. Current code snapshot: `613-os-v0.5.zip`; deployed source is additionally persisted in GitHub `MeisnerMax/613-OS` on `main`.
-8. Current production URL: `https://613-os.vercel.app`.
-9. Immediate next step: set the real Google OAuth client ID/secret as Vercel runtime environment variables, authorize `https://613-os.vercel.app/api/auth/google/callback` in Google Cloud, redeploy, and verify `/api/auth/status` reports `oauthConfigured=true`.
-10. Then complete Google sign-in interactively and run `verify:task-parity` with the authenticated read-only token.
-11. Only after that passes may Task live display be deliberately enabled.
-12. After Task live activation is approved, implement equivalent read-only live readers/parity for Assets and Development, beginning with Hotel 57, then continue to Gantt/dependencies.
+4. Produce a checked plan before each work step.
+5. Keep all production sources read-only unless Max explicitly authorizes a specific write.
+6. Production source is GitHub `MeisnerMax/613-OS` on `main`; current isolated work is on `feature/read-only-assets-hotel57`.
+7. Production URL: `https://613-os.vercel.app`.
+8. OAuth credentials are present in Vercel and OAuth request generation is correct. The exact Google redirect URI has been added; retry interactive sign-in after propagation.
+9. After successful sign-in, run Task parity with a short-lived read-only token. Do not enable live Task display before that passes.
+10. Then run `verify:asset-parity` and `verify:hotel57-parity` on the feature branch using the same class of short-lived read-only token.
+11. Before exposing live Assets, define and verify task/project count joins so the UI does not replace current counts with zeros.
+12. Before merging the feature branch, require the latest Vercel Preview to be `READY` with the read-only suite and TypeScript passing.
+13. After safe read-only integration, continue with the Hotel 57 Gantt/dependency pilot.
