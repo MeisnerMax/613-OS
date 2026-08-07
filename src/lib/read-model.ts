@@ -1,11 +1,11 @@
-import type { OperationalOverview, PortfolioSnapshot, Task } from "./domain";
+import type { Asset, OperationalOverview, PortfolioSnapshot, Task } from "./domain";
 import { MockReadOnlyOperationsSource } from "./adapters/read-only/mock-source";
 import { selectTaskProvider } from "./adapters/read-only/provider-selector";
 import { selectAssetProvider, selectDevelopmentProvider } from "./adapters/read-only/portfolio-provider-selector";
 
 const transitionSource = new MockReadOnlyOperationsSource();
 
-function sourceAwareOverview(base: OperationalOverview, tasks: ReadonlyArray<Task>, assets: PortfolioSnapshot["assets"]): OperationalOverview {
+function sourceAwareOverview(base: OperationalOverview, tasks: ReadonlyArray<Task>, assets: ReadonlyArray<Asset>): OperationalOverview {
   return {
     ...base,
     openTasks: tasks.filter((task) => task.status !== "Done").length,
