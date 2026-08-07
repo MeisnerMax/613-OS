@@ -59,7 +59,7 @@
 - Safe authenticated reversible write verifier available at `/verify/task-db-write` and POST `/api/verify/task-db-write`.
 - Task ID allocation is concurrency-safe without changing legacy IDs: insert attempts use the primary-key conflict as the arbiter and retry with a bounded limit instead of allowing duplicate IDs under concurrent creates.
 - Session-derived auth status and Task API responses explicitly use `Cache-Control: no-store`.
-- Task edits use optimistic concurrency through the existing database `version` field. The UI sends the loaded version; stale writes return HTTP 409 and the latest Task is reloaded rather than silently overwriting another user's change.
+- Task edits use optimistic concurrency through the existing database `version` field. The UI sends the loaded version; stale writes return HTTP 409 rather than silently overwriting another user's change. Unsaved local edits remain visible until the user explicitly reloads the newer server version.
 
 ## Productive Task CRUD UI
 
@@ -69,27 +69,24 @@
 - Updates/comments can be added from the drawer and are persisted in `task_updates` with audit events.
 - Saved and newly created Tasks update the visible client table without a full page reload.
 - Unsaved drawer changes require confirmation before closing.
-- UI handles concurrent field edits explicitly through the 409 conflict path.
+- Updates/comments are blocked while field edits are unsaved so an activity refresh cannot discard draft changes.
+- UI handles concurrent field edits explicitly through the 409 conflict path and requires an explicit `Reload latest` before editing the newer version.
+- Intentionally clearing a description remains cleared; it does not fall back to legacy progress text.
 - CRUD-specific CSS is scoped to the Tasks route; global application styling was not broadly rewritten.
 - No Delete function was added; completion remains represented by Task status `Done`.
 
 ## Verification status
 
-Passed on Vercel Preview and Production hardening builds:
+Passed on Vercel Preview and Production:
 
 - `POSTGRES_TASK_STORE_VERIFICATION_OK`
 - `TASK_INPUT_VALIDATION_OK`
 - `TASK_DATABASE_WRITE_GATE_VERIFICATION_OK`
-- Next.js 16.3 compilation
-- TypeScript
-- route generation for `/api/tasks`, `/api/tasks/[id]`, `/api/tasks/[id]/updates`, `/api/verify/task-db`, `/api/verify/task-db-write`, `/verify/task-db-write`
-
-Latest Task CRUD Preview additionally passed:
-
 - `TASK_CRUD_UI_VERIFICATION_OK`
 - optimistic version input validation and HTTP 409 mapping
-- Next.js compilation and TypeScript
-- full route generation including `/tasks`
+- Next.js 16.3 compilation
+- TypeScript
+- route generation for `/tasks`, `/api/tasks`, `/api/tasks/[id]`, `/api/tasks/[id]/updates`, `/api/verify/task-db`, `/api/verify/task-db-write`, `/verify/task-db-write`
 
 Database/runtime verification passed:
 
@@ -106,7 +103,8 @@ Database/runtime verification passed:
 - reversible write probe used temporary `TSK-0076` and passed create/update/taskUpdate/auditTrail/cleanup
 - write probe baselineCount=75 and finalCount=75
 - direct Neon post-test check confirmed zero test residue
-- after production hardening deployment, direct Neon check remained 75 total / 75 distinct / 0 active WEBAPP test tasks
+- after production hardening and CRUD deployment, direct Neon checks remained 75 total / 75 distinct / 0 active WEBAPP tasks
+- unauthenticated Production `/api/tasks` returns HTTP 401 `AUTH_REQUIRED` with `Cache-Control: no-store`
 
 ## Current activation status
 
@@ -122,7 +120,7 @@ OPS_TASK_DB_WRITES_ENABLED=true
 
 The original Task Sheet remains historical/read-only migration input and receives no writeback. Do not commit `DATABASE_URL` or any database credential.
 
-Production hardening is already on `main` and verified. The productive Task CRUD UI is currently verified on feature branch `feature/task-crud-ui`; its final Preview passed all four Task verification scripts plus TypeScript and Next.js. Next action is a fast-forward to `main`, followed by Production build verification. No real Task should be created or changed merely for deployment testing.
+Production hardening and productive Task CRUD are both on `main`. Commit `bb6fe97b774c11eadb66203f4017e38e32cabb5e` deployed successfully to Vercel Production and is READY. Deployment itself changed no Task rows: direct Neon verification after rollout remained 75 tasks / 75 distinct IDs / 0 WEBAPP tasks. The next major product block is Asset/Development transition work; their existing Sheets remain read-only until their own checked migrations are approved.
 
 ## Handoff
 
@@ -132,7 +130,7 @@ Production hardening is already on `main` and verified. The productive Task CRUD
 4. PostgreSQL contains the verified 75-task legacy migration and is the operative Task source of truth.
 5. Authenticated Production read and reversible write verification are complete; write gate is enabled.
 6. Production hardening is complete: concurrency-safe Task IDs and explicit `no-store` for session/Task API responses.
-7. `feature/task-crud-ui` contains the verified productive Task create/edit/update UI and optimistic concurrency protection.
-8. Before merging CRUD, require final branch Preview to pass `POSTGRES_TASK_STORE_VERIFICATION_OK`, `TASK_INPUT_VALIDATION_OK`, `TASK_DATABASE_WRITE_GATE_VERIFICATION_OK`, `TASK_CRUD_UI_VERIFICATION_OK`, TypeScript and Next.js.
-9. Fast-forward only if the branch is ahead of and not behind `main`, then verify the resulting Production deployment.
-10. After Production CRUD is verified, update the persistent Drive handoff and continue Asset/Development transition work separately. Do not reintroduce Task Sheet synchronization or writeback.
+7. Productive Task CRUD is live on `/tasks`: create/edit operational fields and add updates/comments against PostgreSQL.
+8. Optimistic concurrency is active through Task version checks; stale edits return HTTP 409 and local drafts are not automatically discarded.
+9. Latest post-deploy database verification is 75 total / 75 distinct / 0 WEBAPP tasks, so the rollout itself changed no Task data.
+10. Next checked engineering block: continue Asset/Development integration separately. Do not reintroduce Task Sheet synchronization or writeback.
