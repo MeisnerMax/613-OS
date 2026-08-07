@@ -45,6 +45,20 @@ export type Project = {
   nextMilestone: string;
 };
 
+export type DevelopmentProjectDetail = {
+  id: string;
+  assetId: string;
+  name: string;
+  status: string;
+  startDate?: string;
+  plannedEndDate?: string;
+  asOfDate?: string;
+  currentFocus?: string;
+  currentOwner?: string;
+  currentStartDate?: string;
+  currentCompletionEvidence?: string;
+};
+
 export type DevelopmentWorkPackage = {
   sourceId: string;
   phase: string;
