@@ -14,6 +14,8 @@ const projectDetailPage = readFileSync(join(root, "src/app/projects/[id]/page.ts
 const assetsPage = readFileSync(join(root, "src/app/assets/page.tsx"), "utf8");
 const assetsStyles = readFileSync(join(root, "src/app/assets/assets.css"), "utf8");
 const assetDetailPage = readFileSync(join(root, "src/app/assets/[id]/page.tsx"), "utf8");
+const runtimeVerifier = readFileSync(join(root, "src/app/api/verify/portfolio-db/route.ts"), "utf8");
+const authStatus = readFileSync(join(root, "src/app/api/auth/status/route.ts"), "utf8");
 
 const oldAssetSource = process.env.OPS_ASSET_SOURCE;
 const oldDevelopmentSource = process.env.OPS_DEVELOPMENT_SOURCE;
@@ -52,5 +54,20 @@ assert(assetsStyles.includes(".openAsset{display:flex"), "Asset detail link layo
 assert(assetDetailPage.includes("getAssetById"), "Asset detail read path is missing.");
 assert(assetDetailPage.includes("Financial snapshot"), "Asset financial snapshot section is missing.");
 assert(assetDetailPage.includes("No source Sheet is modified"), "Asset detail must retain the read-only source disclosure.");
+
+assert(runtimeVerifier.includes("require613WorkspaceSession"), "Portfolio runtime verifier must require a 613 Workspace session.");
+assert(runtimeVerifier.includes('"Cache-Control": "no-store"'), "Portfolio runtime verifier must disable caching.");
+assert(runtimeVerifier.includes("taskBaseline"), "Portfolio verifier must protect the existing 75-task baseline.");
+assert(runtimeVerifier.includes("assets?.total === 19"), "Portfolio verifier must enforce 19 Asset records.");
+assert(runtimeVerifier.includes("hotel57.packages === 72"), "Portfolio verifier must enforce 72 Hotel 57 packages.");
+assert(runtimeVerifier.includes("legacy-asset-import-2026-08-07"), "Asset migration marker verification is missing.");
+assert(runtimeVerifier.includes("legacy-development-hotel57-import-2026-08-07"), "Hotel 57 migration marker verification is missing.");
+assert(!/\b(INSERT|UPDATE|DELETE|TRUNCATE)\b/i.test(runtimeVerifier), "Portfolio runtime verifier must be read-only.");
+assert(!runtimeVerifier.includes("market_value"), "Portfolio runtime verifier must not expose financial values.");
+assert(!runtimeVerifier.includes("description"), "Portfolio runtime verifier must not expose descriptive source content.");
+assert(authStatus.includes("assetSourceRequested"), "Auth status must expose the requested Asset source mode.");
+assert(authStatus.includes("assetDatabaseApproved"), "Auth status must expose the Asset approval gate.");
+assert(authStatus.includes("developmentSourceRequested"), "Auth status must expose the requested Development source mode.");
+assert(authStatus.includes("developmentDatabaseApproved"), "Auth status must expose the Development approval gate.");
 
 console.log("ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK");
