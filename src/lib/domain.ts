@@ -6,16 +6,22 @@ export type Task = {
   id: string;
   title: string;
   asset: string;
+  category?: string;
   status: TaskStatus;
   priority: Priority;
   owner: string;
+  support?: string;
+  info?: string;
   waitingFor?: string;
+  waitingSince?: string;
   waitingDays?: number;
   deadline?: string;
   nextStep?: string;
+  nextStepBy?: string;
   description: string;
   flag?: "overdue" | "waiting" | "attention";
   updates: string[];
+  version?: number;
 };
 
 export type Asset = {
