@@ -56,11 +56,26 @@
 - Task updates/comments are stored separately in `task_updates`.
 - Real task values and database credentials are never committed to the public repository.
 - Safe authenticated runtime verifier available at `/api/verify/task-db`; it returns counts/ID coverage/migration status but no task content or credentials.
-- Safe authenticated reversible write verifier available at `/verify/task-db-write` and POST `/api/verify/task-db-write`; it requires the write gate, refuses to run unless the active task baseline is exactly 75, creates only a temporary WEBAPP test task, verifies create/update/comment/audit, removes the test task and its test audit data, and requires the final active task count to return to 75.
+- Safe authenticated reversible write verifier available at `/verify/task-db-write` and POST `/api/verify/task-db-write`.
+- Task ID allocation is concurrency-safe without changing legacy IDs: insert attempts use the primary-key conflict as the arbiter and retry with a bounded limit instead of allowing duplicate IDs under concurrent creates.
+- Session-derived auth status and Task API responses explicitly use `Cache-Control: no-store`.
+- Task edits use optimistic concurrency through the existing database `version` field. The UI sends the loaded version; stale writes return HTTP 409 and the latest Task is reloaded rather than silently overwriting another user's change.
+
+## Productive Task CRUD UI
+
+- `/tasks` keeps the existing status views and table while adding a productive `New task` action.
+- New Tasks can set title, property/project, category, status, priority, owner, support, deadline, next step, next-step date, waiting dependency/date, info and description/progress.
+- Existing Tasks can edit the same operational fields directly in the Task drawer.
+- Updates/comments can be added from the drawer and are persisted in `task_updates` with audit events.
+- Saved and newly created Tasks update the visible client table without a full page reload.
+- Unsaved drawer changes require confirmation before closing.
+- UI handles concurrent field edits explicitly through the 409 conflict path.
+- CRUD-specific CSS is scoped to the Tasks route; global application styling was not broadly rewritten.
+- No Delete function was added; completion remains represented by Task status `Done`.
 
 ## Verification status
 
-Passed on Vercel Preview and Production code builds:
+Passed on Vercel Preview and Production hardening builds:
 
 - `POSTGRES_TASK_STORE_VERIFICATION_OK`
 - `TASK_INPUT_VALIDATION_OK`
@@ -68,6 +83,13 @@ Passed on Vercel Preview and Production code builds:
 - Next.js 16.3 compilation
 - TypeScript
 - route generation for `/api/tasks`, `/api/tasks/[id]`, `/api/tasks/[id]/updates`, `/api/verify/task-db`, `/api/verify/task-db-write`, `/verify/task-db-write`
+
+Latest Task CRUD Preview additionally passed:
+
+- `TASK_CRUD_UI_VERIFICATION_OK`
+- optimistic version input validation and HTTP 409 mapping
+- Next.js compilation and TypeScript
+- full route generation including `/tasks`
 
 Database/runtime verification passed:
 
@@ -83,11 +105,12 @@ Database/runtime verification passed:
 - Production runtime reports `taskDatabaseWritesEnabled=true`
 - reversible write probe used temporary `TSK-0076` and passed create/update/taskUpdate/auditTrail/cleanup
 - write probe baselineCount=75 and finalCount=75
-- direct Neon post-test check: TSK-0076 task rows=0, task_updates=0, activity_events=0, active WEBAPP test tasks=0
+- direct Neon post-test check confirmed zero test residue
+- after production hardening deployment, direct Neon check remained 75 total / 75 distinct / 0 active WEBAPP test tasks
 
 ## Current activation status
 
-PostgreSQL Task reads and writes are now production-verified and operationally approved. Production uses:
+PostgreSQL Task reads and writes are production-verified and operationally approved. Production uses:
 
 ```env
 DATABASE_URL=<server-side Neon connection>
@@ -99,7 +122,7 @@ OPS_TASK_DB_WRITES_ENABLED=true
 
 The original Task Sheet remains historical/read-only migration input and receives no writeback. Do not commit `DATABASE_URL` or any database credential.
 
-Before broad user-facing CRUD rollout, address two hardening items already identified during review: make Task ID allocation concurrency-safe instead of relying on `MAX(id)+1`, and make session-derived status responses explicitly `Cache-Control: no-store`. Then wire create/edit/update UX against the verified PostgreSQL APIs.
+Production hardening is already on `main` and verified. The productive Task CRUD UI is currently verified on feature branch `feature/task-crud-ui`; its final Preview passed all four Task verification scripts plus TypeScript and Next.js. Next action is a fast-forward to `main`, followed by Production build verification. No real Task should be created or changed merely for deployment testing.
 
 ## Handoff
 
@@ -107,9 +130,9 @@ Before broad user-facing CRUD rollout, address two hardening items already ident
 2. Inspect current GitHub `main` before changes.
 3. Existing production Sheets remain read-only and must not be modified.
 4. PostgreSQL contains the verified 75-task legacy migration and is the operative Task source of truth.
-5. Authenticated Production read verification is complete: 75/75 tasks and migration completed 75/75.
-6. User explicitly approved writes; Production runtime has `OPS_TASK_DB_WRITES_ENABLED=true`.
-7. Reversible Production write verification passed completely using temporary TSK-0076, and direct Neon verification confirmed zero test residue and final task count 75.
-8. Task read/write backend is production-verified. Do not revert to Sheets synchronization or writeback.
-9. Next checked engineering step: concurrency-safe Task ID allocation plus `no-store` hardening for session-derived status responses, tested on a feature branch before main.
-10. After that, wire the user-facing Task CRUD UI (create/edit/status/owner/deadline/waiting/next step/update history) to the verified APIs, then continue Asset/Development transition work separately.
+5. Authenticated Production read and reversible write verification are complete; write gate is enabled.
+6. Production hardening is complete: concurrency-safe Task IDs and explicit `no-store` for session/Task API responses.
+7. `feature/task-crud-ui` contains the verified productive Task create/edit/update UI and optimistic concurrency protection.
+8. Before merging CRUD, require final branch Preview to pass `POSTGRES_TASK_STORE_VERIFICATION_OK`, `TASK_INPUT_VALIDATION_OK`, `TASK_DATABASE_WRITE_GATE_VERIFICATION_OK`, `TASK_CRUD_UI_VERIFICATION_OK`, TypeScript and Next.js.
+9. Fast-forward only if the branch is ahead of and not behind `main`, then verify the resulting Production deployment.
+10. After Production CRUD is verified, update the persistent Drive handoff and continue Asset/Development transition work separately. Do not reintroduce Task Sheet synchronization or writeback.
