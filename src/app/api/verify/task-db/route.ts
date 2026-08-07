@@ -51,7 +51,7 @@ export async function GET() {
     const migrationRows = await sql`
       SELECT status, expected_count, imported_count
       FROM migration_runs
-      WHERE migration_key = 'task-sheet-to-postgres-2026-08-07'
+      WHERE migration_key = 'legacy-task-import-2026-08-07'
       LIMIT 1
     ` as MigrationRow[];
 
