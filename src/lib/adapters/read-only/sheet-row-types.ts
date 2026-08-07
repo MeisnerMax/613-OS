@@ -1,0 +1,64 @@
+export type TaskSheetRow = {
+  ID?: string;
+  Task?: string;
+  "Property / Project"?: string;
+  Category?: string;
+  Status?: string;
+  "Waiting for"?: string;
+  "Waiting since"?: string;
+  Priority?: string;
+  Owner?: string;
+  Support?: string;
+  Info?: string;
+  Deadline?: string;
+  "Next step"?: string;
+  "Next step by"?: string;
+  "Latest progress"?: string;
+  "Last activity"?: string;
+  Source?: string;
+  Created?: string;
+  Flag?: string;
+  "Source email"?: string;
+  Documents?: string;
+  "Drive folder"?: string;
+};
+
+export type AssetSheetRow = {
+  "Asset ID"?: string;
+  "Object Name"?: string;
+  "Asset Type"?: string;
+  Status?: string;
+  Street?: string;
+  "ZIP Code"?: string;
+  City?: string;
+  "Year Built"?: string;
+  "Living Area sqm"?: string;
+  "Total Area sqm"?: string;
+  "Units / Rooms"?: string;
+  "Side Costs / Y"?: string;
+  "Asset Price"?: string;
+  "Property Price"?: string;
+  "Renovation Cost until 2025"?: string;
+  "Market Value 2021"?: string;
+  "Market Value 2026"?: string;
+  "Source Row"?: string;
+  "Sheet (helper)"?: string;
+};
+
+export type DevelopmentSheetRow = {
+  ID?: string;
+  Phase?: string;
+  Arbeitspaket?: string;
+  "Was genau jetzt zu tun ist"?: string;
+  Verantwortlich?: string;
+  Start?: string;
+  Ende?: string;
+  "Dauer (KT)"?: string;
+  Status?: string;
+  "Priorität"?: string;
+  "Vorher muss vorliegen"?: string;
+  "Fertig, wenn"?: string;
+  "Direkt danach"?: string;
+  "Kalender?"?: string;
+  "Planoffset (Tage)"?: string;
+};
