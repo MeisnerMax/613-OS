@@ -96,7 +96,7 @@ function mapRow(row: TaskRow, updates: string[]): Task {
     deadline: row.deadline ?? undefined,
     nextStep: row.next_step ?? undefined,
     nextStepBy: row.next_step_by ?? undefined,
-    description: row.description || row.latest_progress || "",
+    description: row.description,
     flag: flagFor(row),
     updates,
     version: Number(row.version),
