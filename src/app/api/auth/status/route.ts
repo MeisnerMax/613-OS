@@ -21,5 +21,7 @@ export async function GET() {
     taskSourceRequested: requestedTaskSourceMode(),
     taskParityApproved: process.env.OPS_TASK_PARITY_APPROVED === "true",
     liveTaskDisplayEnabled: process.env.OPS_ALLOW_LIVE_TASK_DISPLAY === "true",
+    taskDatabaseConfigured: Boolean(process.env.DATABASE_URL?.trim()),
+    taskDatabaseApproved: process.env.OPS_TASK_DB_APPROVED === "true",
   });
 }
