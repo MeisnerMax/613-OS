@@ -5,6 +5,7 @@ import {
   getGoogleWorkspaceSession,
   isGoogleOAuthConfigured,
 } from "@/lib/auth/google-workspace";
+import "./task-crud.css";
 
 export default async function TasksPage() {
   const [{ tasks, sourceMode }, session] = await Promise.all([
