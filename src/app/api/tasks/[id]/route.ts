@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PostgresTaskStore } from "@/lib/db/task-store";
-import { require613WorkspaceSession } from "@/lib/db/authz";
+import { require613WorkspaceSession, requireTaskDatabaseWritesEnabled } from "@/lib/db/authz";
 import { apiErrorStatus, parseTaskPatchInput } from "@/lib/db/task-input";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +24,7 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await require613WorkspaceSession();
+    requireTaskDatabaseWritesEnabled();
     const { id } = await context.params;
     const input = parseTaskPatchInput(await request.json());
     const task = await new PostgresTaskStore().updateTask(id, input, { email: session.email });
