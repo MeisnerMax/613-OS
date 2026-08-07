@@ -1,15 +1,28 @@
 import type { Asset, DevelopmentProjectDetail, DevelopmentWorkPackage, Priority } from "@/lib/domain";
 import { taskDatabase } from "./client";
 
+type DbNumber = number | string | null;
+
 type AssetRow = {
   id: string;
   name: string;
   asset_type: string;
   status: Asset["status"];
+  street: string | null;
+  zip_code: string | null;
   city: string | null;
-  units_rooms: number | null;
-  open_tasks: number | string;
-  project_count: number | string;
+  year_built: DbNumber;
+  living_area_sqm: DbNumber;
+  total_area_sqm: DbNumber;
+  units_rooms: DbNumber;
+  side_costs_year: DbNumber;
+  asset_price: DbNumber;
+  property_price: DbNumber;
+  renovation_cost_until_2025: DbNumber;
+  market_value_2021: DbNumber;
+  market_value_2026: DbNumber;
+  open_tasks: DbNumber;
+  project_count: DbNumber;
 };
 
 type ProjectRow = {
@@ -44,14 +57,31 @@ type WorkPackageRow = {
   plan_offset_days: number | null;
 };
 
+function optionalNumber(value: DbNumber): number | undefined {
+  if (value === null || value === "") return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+}
+
 function mapAsset(row: AssetRow): Asset {
   return {
     id: row.id,
     name: row.name,
     type: row.asset_type,
     status: row.status,
+    street: row.street ?? undefined,
+    zipCode: row.zip_code ?? undefined,
     city: row.city ?? "—",
-    units: Number(row.units_rooms ?? 0),
+    yearBuilt: optionalNumber(row.year_built),
+    livingAreaSqm: optionalNumber(row.living_area_sqm),
+    totalAreaSqm: optionalNumber(row.total_area_sqm),
+    units: optionalNumber(row.units_rooms) ?? 0,
+    sideCostsYear: optionalNumber(row.side_costs_year),
+    assetPrice: optionalNumber(row.asset_price),
+    propertyPrice: optionalNumber(row.property_price),
+    renovationCostUntil2025: optionalNumber(row.renovation_cost_until_2025),
+    marketValue2021: optionalNumber(row.market_value_2021),
+    marketValue2026: optionalNumber(row.market_value_2026),
     openTasks: Number(row.open_tasks ?? 0),
     projects: Number(row.project_count ?? 0),
   };
@@ -97,7 +127,9 @@ export class PostgresAssetDevelopmentStore {
   async listAssets(): Promise<ReadonlyArray<Asset>> {
     const sql = taskDatabase();
     const rows = await sql`
-      SELECT a.id, a.name, a.asset_type, a.status, a.city, a.units_rooms,
+      SELECT a.id, a.name, a.asset_type, a.status, a.street, a.zip_code, a.city, a.year_built,
+        a.living_area_sqm, a.total_area_sqm, a.units_rooms, a.side_costs_year, a.asset_price,
+        a.property_price, a.renovation_cost_until_2025, a.market_value_2021, a.market_value_2026,
         (SELECT count(*) FROM tasks t
           WHERE t.deleted_at IS NULL AND t.status <> 'Done'
             AND (lower(trim(t.property_project)) = lower(trim(a.name))
