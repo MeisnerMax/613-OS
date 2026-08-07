@@ -12,7 +12,7 @@ export default async function TasksPage() {
     getGoogleWorkspaceSession(),
   ]);
   const oauthConfigured = isGoogleOAuthConfigured();
-  const sourceLabel = sourceMode === "mock-read-only" ? "isolated mock read model" : "read-only Google Sheets";
+  const sourceLabel = sourceMode === "postgres" ? "613 OS database" : sourceMode === "mock-read-only" ? "isolated mock read model" : "read-only Google Sheets";
 
   return <div className="stack">
     <Header eyebrow="Operations" title="Tasks" description={`One task record, multiple views. Current source: ${sourceLabel}.`}/>
@@ -21,9 +21,11 @@ export default async function TasksPage() {
         <span className="eyebrow">Google Workspace connection</span>
         <strong>{session.authenticated ? `Connected · ${session.email ?? "verified Google account"}` : oauthConfigured ? "Ready to connect" : "OAuth client not configured"}</strong>
         <small>
-          {sourceMode === "google-sheets-read-only"
-            ? "Live task source is active in read-only mode."
-            : "Live task source remains locked; production Sheets are not being written to."}
+          {sourceMode === "postgres"
+            ? "613 OS is using its own task database."
+            : sourceMode === "google-sheets-read-only"
+              ? "Live task source is active in read-only mode."
+              : "Task database remains locked; production Sheets are not being written to."}
         </small>
       </div>
       {session.authenticated
