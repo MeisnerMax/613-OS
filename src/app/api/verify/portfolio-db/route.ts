@@ -21,7 +21,13 @@ type AssetSummaryRow = {
   sold: CountValue;
 };
 
-type Hotel57SummaryRow = {
+type DevelopmentTotalsRow = {
+  projects: CountValue;
+  packages: CountValue;
+};
+
+type ProjectSummaryRow = {
+  id: string;
   project_count: CountValue;
   asset_id: string | null;
   package_count: CountValue;
@@ -40,8 +46,34 @@ type MigrationRow = {
   imported_count: CountValue;
 };
 
+type ProjectSummary = {
+  projectCount: number;
+  assetId: string | null;
+  packages: number;
+  distinctPackages: number;
+  minOrder: number | null;
+  maxOrder: number | null;
+  done: number;
+  inProgress: number;
+  notStarted: number;
+};
+
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: NO_STORE });
+}
+
+function mapProjectSummary(row: ProjectSummaryRow): ProjectSummary {
+  return {
+    projectCount: Number(row.project_count),
+    assetId: row.asset_id,
+    packages: Number(row.package_count),
+    distinctPackages: Number(row.distinct_packages),
+    minOrder: row.min_order,
+    maxOrder: row.max_order,
+    done: Number(row.done),
+    inProgress: Number(row.in_progress),
+    notStarted: Number(row.not_started),
+  };
 }
 
 export async function GET() {
@@ -80,8 +112,15 @@ export async function GET() {
       FROM assets
     ` as AssetSummaryRow[];
 
-    const hotel57Rows = await sql`
+    const developmentRows = await sql`
       SELECT
+        (SELECT COUNT(*) FROM development_projects)::int AS projects,
+        (SELECT COUNT(*) FROM development_work_packages)::int AS packages
+    ` as DevelopmentTotalsRow[];
+
+    const projectRows = await sql`
+      SELECT
+        p.id,
         COUNT(DISTINCT p.id)::int AS project_count,
         MIN(p.asset_id) AS asset_id,
         COUNT(w.source_id)::int AS package_count,
@@ -93,15 +132,18 @@ export async function GET() {
         COUNT(*) FILTER (WHERE w.status = 'Nicht begonnen')::int AS not_started
       FROM development_projects p
       LEFT JOIN development_work_packages w ON w.project_id = p.id
-      WHERE p.id = 'PRJ-0001'
-    ` as Hotel57SummaryRow[];
+      WHERE p.id IN ('PRJ-0001', 'PRJ-0002')
+      GROUP BY p.id
+      ORDER BY p.id
+    ` as ProjectSummaryRow[];
 
     const migrationRows = await sql`
       SELECT migration_key, status, expected_count, imported_count
       FROM migration_runs
       WHERE migration_key IN (
         'legacy-asset-import-2026-08-07',
-        'legacy-development-hotel57-import-2026-08-07'
+        'legacy-development-hotel57-import-2026-08-07',
+        'legacy-development-hahnmuehle-import-2026-08-08'
       )
       ORDER BY migration_key
     ` as MigrationRow[];
@@ -119,17 +161,14 @@ export async function GET() {
       sold: Number(assetRows[0].sold),
     } : null;
 
-    const hotel57 = hotel57Rows[0] ? {
-      projectCount: Number(hotel57Rows[0].project_count),
-      assetId: hotel57Rows[0].asset_id,
-      packages: Number(hotel57Rows[0].package_count),
-      distinctPackages: Number(hotel57Rows[0].distinct_packages),
-      minOrder: hotel57Rows[0].min_order,
-      maxOrder: hotel57Rows[0].max_order,
-      done: Number(hotel57Rows[0].done),
-      inProgress: Number(hotel57Rows[0].in_progress),
-      notStarted: Number(hotel57Rows[0].not_started),
+    const development = developmentRows[0] ? {
+      projects: Number(developmentRows[0].projects),
+      packages: Number(developmentRows[0].packages),
     } : null;
+
+    const projectSummaries = new Map(projectRows.map((row) => [row.id, mapProjectSummary(row)]));
+    const hotel57 = projectSummaries.get("PRJ-0001") ?? null;
+    const hahnmuehle = projectSummaries.get("PRJ-0002") ?? null;
 
     const migrations = Object.fromEntries(migrationRows.map((row) => [row.migration_key, {
       status: row.status,
@@ -139,6 +178,7 @@ export async function GET() {
 
     const assetMigration = migrations["legacy-asset-import-2026-08-07"];
     const hotel57Migration = migrations["legacy-development-hotel57-import-2026-08-07"];
+    const hahnmuehleMigration = migrations["legacy-development-hahnmuehle-import-2026-08-08"];
 
     const ok = Boolean(
       task?.total === 75 &&
@@ -148,6 +188,8 @@ export async function GET() {
       assets.active === 9 &&
       assets.underExamination === 8 &&
       assets.sold === 2 &&
+      development?.projects === 2 &&
+      development.packages === 144 &&
       hotel57?.projectCount === 1 &&
       hotel57.assetId === "A004" &&
       hotel57.packages === 72 &&
@@ -157,12 +199,24 @@ export async function GET() {
       hotel57.done === 4 &&
       hotel57.inProgress === 6 &&
       hotel57.notStarted === 62 &&
+      hahnmuehle?.projectCount === 1 &&
+      hahnmuehle.assetId === "A005" &&
+      hahnmuehle.packages === 72 &&
+      hahnmuehle.distinctPackages === 72 &&
+      hahnmuehle.minOrder === 1 &&
+      hahnmuehle.maxOrder === 72 &&
+      hahnmuehle.done === 3 &&
+      hahnmuehle.inProgress === 7 &&
+      hahnmuehle.notStarted === 62 &&
       assetMigration?.status === "completed" &&
       assetMigration.expectedCount === 19 &&
       assetMigration.importedCount === 19 &&
       hotel57Migration?.status === "completed" &&
       hotel57Migration.expectedCount === 72 &&
-      hotel57Migration.importedCount === 72
+      hotel57Migration.importedCount === 72 &&
+      hahnmuehleMigration?.status === "completed" &&
+      hahnmuehleMigration.expectedCount === 72 &&
+      hahnmuehleMigration.importedCount === 72
     );
 
     return json({
@@ -173,7 +227,9 @@ export async function GET() {
       developmentDatabaseApproved: true,
       taskBaseline: task,
       assets,
+      development,
       hotel57,
+      hahnmuehle,
       migrations,
     }, ok ? 200 : 409);
   } catch (error) {
