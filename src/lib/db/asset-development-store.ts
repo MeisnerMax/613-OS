@@ -39,6 +39,10 @@ type ProjectRow = {
   current_completion_evidence: string | null;
 };
 
+type ProjectIdRow = {
+  id: string;
+};
+
 type WorkPackageRow = {
   source_id: string;
   phase: string;
@@ -143,6 +147,15 @@ export class PostgresAssetDevelopmentStore {
   async getAsset(id: string): Promise<Asset | null> {
     const assets = await this.listAssets();
     return assets.find((asset) => asset.id === id) ?? null;
+  }
+
+  async listProjectIds(): Promise<ReadonlyArray<string>> {
+    const sql = taskDatabase();
+    const rows = await sql`
+      SELECT id
+      FROM development_projects
+      ORDER BY id` as ProjectIdRow[];
+    return rows.map((row) => row.id);
   }
 
   async getProjectDetail(projectId: string): Promise<DevelopmentProjectDetail | null> {
