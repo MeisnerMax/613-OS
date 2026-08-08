@@ -65,9 +65,18 @@ assert(runtimeVerifier.includes("require613WorkspaceSession"), "Portfolio runtim
 assert(runtimeVerifier.includes('"Cache-Control": "no-store"'), "Portfolio runtime verifier must disable caching.");
 assert(runtimeVerifier.includes("taskBaseline"), "Portfolio verifier must protect the existing 75-task baseline.");
 assert(runtimeVerifier.includes("assets?.total === 19"), "Portfolio verifier must enforce 19 Asset records.");
+assert(runtimeVerifier.includes("development?.projects === 2"), "Portfolio verifier must enforce the two-project staged Development scope.");
+assert(runtimeVerifier.includes("development.packages === 144"), "Portfolio verifier must enforce the 144-package staged Development scope.");
 assert(runtimeVerifier.includes("hotel57.packages === 72"), "Portfolio verifier must enforce 72 Hotel 57 packages.");
+assert(runtimeVerifier.includes('hotel57.assetId === "A004"'), "Hotel 57 Asset link verification is missing.");
+assert(runtimeVerifier.includes("hahnmuehle.packages === 72"), "Portfolio verifier must enforce 72 Hahnmuehle packages.");
+assert(runtimeVerifier.includes('hahnmuehle.assetId === "A005"'), "Hahnmuehle Asset link verification is missing.");
+assert(runtimeVerifier.includes("hahnmuehle.done === 3"), "Hahnmuehle completed-package baseline is missing.");
+assert(runtimeVerifier.includes("hahnmuehle.inProgress === 7"), "Hahnmuehle in-progress baseline is missing.");
+assert(runtimeVerifier.includes("hahnmuehle.notStarted === 62"), "Hahnmuehle not-started baseline is missing.");
 assert(runtimeVerifier.includes("legacy-asset-import-2026-08-07"), "Asset migration marker verification is missing.");
 assert(runtimeVerifier.includes("legacy-development-hotel57-import-2026-08-07"), "Hotel 57 migration marker verification is missing.");
+assert(runtimeVerifier.includes("legacy-development-hahnmuehle-import-2026-08-08"), "Hahnmuehle migration marker verification is missing.");
 assert(!/\b(INSERT|UPDATE|DELETE|TRUNCATE)\b/i.test(runtimeVerifier), "Portfolio runtime verifier must be read-only.");
 assert(!runtimeVerifier.includes("market_value"), "Portfolio runtime verifier must not expose financial values.");
 assert(!runtimeVerifier.includes("description"), "Portfolio runtime verifier must not expose descriptive source content.");
