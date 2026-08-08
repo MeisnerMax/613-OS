@@ -8,9 +8,11 @@ function assert(condition: unknown, message: string): asserts condition {
 
 const root = process.cwd();
 const store = readFileSync(join(root, "src/lib/db/asset-development-store.ts"), "utf8");
+const readModel = readFileSync(join(root, "src/lib/read-model.ts"), "utf8");
 const selector = readFileSync(join(root, "src/lib/adapters/read-only/portfolio-provider-selector.ts"), "utf8");
 const migration = readFileSync(join(root, "migrations/0002_asset_development_pilot.sql"), "utf8");
 const rollback = readFileSync(join(root, "migrations/0002_asset_development_pilot_rollback.sql"), "utf8");
+const projectsPage = readFileSync(join(root, "src/app/projects/page.tsx"), "utf8");
 const projectDetailPage = readFileSync(join(root, "src/app/projects/[id]/page.tsx"), "utf8");
 const assetsPage = readFileSync(join(root, "src/app/assets/page.tsx"), "utf8");
 const assetsStyles = readFileSync(join(root, "src/app/assets/assets.css"), "utf8");
@@ -38,6 +40,8 @@ assert(selector.includes("allowedDomain"), "Workspace domain gate is missing.");
 
 assert(store.includes("SELECT a.id"), "Asset database read is missing.");
 assert(store.includes("a.market_value_2026"), "Full Asset Master snapshot fields are not exposed.");
+assert(store.includes("async listProjectIds"), "Migrated Development project ID read is missing.");
+assert(store.includes("FROM development_projects"), "Development project database read is missing.");
 assert(store.includes("FROM development_work_packages"), "Development work-package database read is missing.");
 assert(!/\b(INSERT|UPDATE|DELETE|TRUNCATE)\b/i.test(store), "Asset/development runtime store must remain read-only in the pilot.");
 
@@ -48,6 +52,12 @@ for (const table of ["assets", "development_projects", "development_work_package
 for (const protectedTable of ["tasks", "task_updates", "activity_events", "migration_runs"]) {
   assert(!new RegExp(`DROP\\s+TABLE[^;]*\\b${protectedTable}\\b`, "i").test(rollback), `Rollback must never drop ${protectedTable}.`);
 }
+assert(readModel.includes("getMigratedDevelopmentProjectIds"), "Read model must expose migrated Development project IDs.");
+assert(readModel.includes("provider.reader.listProjectIds()"), "Migrated project IDs must come from the approved Development provider.");
+assert(projectsPage.includes('export const dynamic = "force-dynamic"'), "Projects overview must stay dynamic so migrated navigation follows the Workspace session gate.");
+assert(projectsPage.includes("getMigratedDevelopmentProjectIds"), "Projects overview must query the migrated Development project set.");
+assert(projectsPage.includes("migratedProjects.has(p.id)"), "Projects overview must link projects based on migrated database membership.");
+assert(!projectsPage.includes('p.id === "PRJ-0001"'), "Projects overview must not hard-code Hotel 57 as the only linked project.");
 assert(projectDetailPage.includes("getDevelopmentProjectDetail"), "Project detail metadata read is missing.");
 assert(projectDetailPage.includes("getProjectWorkPackages"), "Project work-package read is missing.");
 assert(projectDetailPage.includes("packages.map"), "Project work-package table is missing.");
