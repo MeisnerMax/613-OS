@@ -155,19 +155,38 @@ For each next project:
 9. Require green Vercel Preview: all existing Task checks, portfolio checks, TypeScript, Next.js and relevant routes.
 10. Only then consider Production data import/activation. Production schema/data changes require explicit approval when they are not already covered by a prior specific approval.
 
+## Phase 2 isolated verification · Hahnmühle
+
+The next separately verified Development project is `PRJ-0002` → `A005` (Hahnmühle).
+
+- Read-only source tab: `005_Hahnmühle`.
+- Source file modified time remained `2026-08-07T10:06:50.395Z` at snapshot verification.
+- Snapshot contains 72 unique work packages in source order 1–72.
+- Status distribution: 3 Erledigt / 7 In Bearbeitung / 62 Nicht begonnen.
+- Isolated Neon branch: `development-hahnmuehle-pilot-2026-08-08` (`br-plain-recipe-a6f9q58d`).
+- Existing isolated-branch baselines remained unchanged: Tasks 75/75, Assets 19/19, Hotel 57 `PRJ-0001 → A004` with 72 packages and 4/6/62 status distribution.
+- Isolated state after Hahnmühle import: 2 Development projects / 144 work packages.
+- Independent full-field parity passed: project MD5 `166e61dcc76777f2ce6bb770c984b2e3`; work-package MD5 `f409c9cfff4ff571d2d3cc12e69424d8` on both source normalization and database normalization.
+- Migration marker `legacy-development-hahnmuehle-import-2026-08-08` is completed 72/72 on the isolated branch only.
+- Runtime verifier on this feature branch now protects both project baselines plus exact 2-project/144-package staged totals. It remains authenticated, aggregate-only, no-store and read-only.
+- Exact feature head before this documentation update was `463fa1e6110931700069ad299c52028844d0f2e7`; Vercel Preview `dpl_B6Q9qqG6gxFANckr73hXAZgx76nx` was READY and passed all Task checks, `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`, TypeScript and Next.js 16.3.0.
+- Production Neon remains unchanged: Hahnmühle is not imported there yet.
+- Production import of `PRJ-0002` requires a new explicit Production-data approval.
+
 ## Current development branch
 
 `feature/development-migration-phase-2`
 
-Purpose: begin the next separately verified Development project migration while keeping Production unchanged until validation is complete.
+Purpose: complete the separately verified Hahnmühle Development migration while keeping Production unchanged until explicit Production-data approval.
 
 ## Handoff
 
 1. Production Tasks are PostgreSQL read/write and verified at 75/75.
 2. Production Assets are PostgreSQL read-only runtime and verified at 19/19.
 3. Production Development currently contains only the fully verified Hotel 57 pilot (`PRJ-0001` → `A004`, 72/72 work packages).
-4. Production portfolio gates are active and authenticated `/api/verify/portfolio-db` is `ok=true`.
+4. Production portfolio gates are active and authenticated `/api/verify/portfolio-db` is `ok=true` for the current Production baseline.
 5. Existing Google Sheets remain read-only legacy/reference sources; do not write back.
-6. Continue Development migrations one project at a time from `feature/development-migration-phase-2`.
-7. Before selecting/importing the next project, inspect `Development_Projects_DE` read-only and choose the next source tab based on actual available/complete source data rather than hard-coded mock order.
-8. Keep Production untouched until the isolated snapshot, Neon parity and Vercel Preview for the next project are all green.
+6. Hahnmühle (`PRJ-0002` → `A005`) is fully imported and full-field verified only on isolated Neon branch `br-plain-recipe-a6f9q58d`.
+7. Feature branch `feature/development-migration-phase-2` contains the expanded safe aggregate verifier and build guard; no project-specific DB store or detail-page duplication was needed because the runtime read path is generic.
+8. Before any Hahnmühle Production import, recheck `Development_Projects_DE` modified time and obtain explicit Production-data approval.
+9. After Production import, rerun aggregate/full-field DB verification, merge only a green exact-head feature build, then require authenticated `/api/verify/portfolio-db` to return `ok=true` for the 2-project/144-package baseline.
