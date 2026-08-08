@@ -132,7 +132,7 @@ export async function GET() {
         COUNT(*) FILTER (WHERE w.status = 'Nicht begonnen')::int AS not_started
       FROM development_projects p
       LEFT JOIN development_work_packages w ON w.project_id = p.id
-      WHERE p.id IN ('PRJ-0001', 'PRJ-0002', 'PRJ-0003', 'PRJ-0004')
+      WHERE p.id IN ('PRJ-0001', 'PRJ-0002', 'PRJ-0003', 'PRJ-0004', 'PRJ-0005')
       GROUP BY p.id
       ORDER BY p.id
     ` as ProjectSummaryRow[];
@@ -145,7 +145,8 @@ export async function GET() {
         'legacy-development-hotel57-import-2026-08-07',
         'legacy-development-hahnmuehle-import-2026-08-08',
         'legacy-development-square-import-2026-08-08',
-        'legacy-development-adamriese-import-2026-08-08'
+        'legacy-development-adamriese-import-2026-08-08',
+        'legacy-development-oldpost-import-2026-08-08'
       )
       ORDER BY migration_key
     ` as MigrationRow[];
@@ -173,6 +174,7 @@ export async function GET() {
     const hahnmuehle = projectSummaries.get("PRJ-0002") ?? null;
     const square = projectSummaries.get("PRJ-0003") ?? null;
     const adamRiese = projectSummaries.get("PRJ-0004") ?? null;
+    const oldPost = projectSummaries.get("PRJ-0005") ?? null;
 
     const migrations = Object.fromEntries(migrationRows.map((row) => [row.migration_key, {
       status: row.status,
@@ -185,6 +187,7 @@ export async function GET() {
     const hahnmuehleMigration = migrations["legacy-development-hahnmuehle-import-2026-08-08"];
     const squareMigration = migrations["legacy-development-square-import-2026-08-08"];
     const adamRieseMigration = migrations["legacy-development-adamriese-import-2026-08-08"];
+    const oldPostMigration = migrations["legacy-development-oldpost-import-2026-08-08"];
 
     const ok = Boolean(
       task?.total === 75 &&
@@ -194,8 +197,8 @@ export async function GET() {
       assets.active === 9 &&
       assets.underExamination === 8 &&
       assets.sold === 2 &&
-      development?.projects === 4 &&
-      development.packages === 288 &&
+      development?.projects === 5 &&
+      development.packages === 360 &&
       hotel57?.projectCount === 1 &&
       hotel57.assetId === "A004" &&
       hotel57.packages === 72 &&
@@ -232,6 +235,15 @@ export async function GET() {
       adamRiese.done === 4 &&
       adamRiese.inProgress === 2 &&
       adamRiese.notStarted === 66 &&
+      oldPost?.projectCount === 1 &&
+      oldPost.assetId === "A012" &&
+      oldPost.packages === 72 &&
+      oldPost.distinctPackages === 72 &&
+      oldPost.minOrder === 1 &&
+      oldPost.maxOrder === 72 &&
+      oldPost.done === 2 &&
+      oldPost.inProgress === 5 &&
+      oldPost.notStarted === 65 &&
       assetMigration?.status === "completed" &&
       assetMigration.expectedCount === 19 &&
       assetMigration.importedCount === 19 &&
@@ -246,7 +258,10 @@ export async function GET() {
       squareMigration.importedCount === 72 &&
       adamRieseMigration?.status === "completed" &&
       adamRieseMigration.expectedCount === 72 &&
-      adamRieseMigration.importedCount === 72
+      adamRieseMigration.importedCount === 72 &&
+      oldPostMigration?.status === "completed" &&
+      oldPostMigration.expectedCount === 72 &&
+      oldPostMigration.importedCount === 72
     );
 
     return json({
@@ -262,6 +277,7 @@ export async function GET() {
       hahnmuehle,
       square,
       adamRiese,
+      oldPost,
       migrations,
     }, ok ? 200 : 409);
   } catch (error) {
