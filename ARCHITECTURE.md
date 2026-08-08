@@ -17,7 +17,7 @@
 
 - Frontend: Next.js App Router + React + TypeScript.
 - Tasks: PostgreSQL is the operative source of truth after one-time migration from `Task_Overview_613Group`.
-- Asset/financial and Development sources remain read-only Google Sheets during transition.
+- Asset/financial and Development sources remain read-only Google Sheets during transition until each PostgreSQL migration is separately verified and approved.
 - Drive: document storage by reference.
 - Calendar: actual meetings, inspections, deadlines and milestones; long project timelines stay in Gantt.
 - Authentication: Google Workspace OAuth with server-side token handling.
@@ -25,9 +25,9 @@
 
 ## Source-of-truth rules
 
-- Asset/financial: `Asset_Overview_v4` remains transition source of truth.
+- Asset/financial: `Asset_Overview_v4` remains transition source of truth until the Asset migration is explicitly activated.
 - Tasks: PostgreSQL is the operative source. `Task_Overview_613Group` is frozen historical migration input only and receives no writeback.
-- Development: `Development_Projects_DE` remains transition source of truth.
+- Development: `Development_Projects_DE` remains transition source of truth until each Development project migration is explicitly activated.
 - No 613 OS transition adapter may write back to existing production Sheets.
 
 ## Task migration milestone · 07.08.2026
@@ -75,9 +75,27 @@
 - CRUD-specific CSS is scoped to the Tasks route; global application styling was not broadly rewritten.
 - No Delete function was added; completion remains represented by Task status `Done`.
 
+## Asset + Development PostgreSQL pilot · 07.08.2026
+
+- Pilot development is isolated on GitHub branch `feature/asset-development-postgres-pilot` and Neon branch `br-old-mud-a6ify2sw` (`asset-development-pilot-2026-08-07`). Neon Production main remains unchanged.
+- Source files were read/exported only. `Asset_Overview_v4` and `Development_Projects_DE` were not modified.
+- Full `Asset_Master` pilot snapshot contains 19 unique Assets: 9 Active, 8 Under examination and 2 Sold.
+- Hotel 57 is the first Development pilot: `PRJ-0001` links to Asset `A004`; project start 12.07.2026, planned completion 15.04.2028, source status `Planung`, source stand 07.08.2026.
+- Hotel 57 contains 72 unique work packages in source order 1–72: 4 `Erledigt`, 6 `In Bearbeitung`, 62 `Nicht begonnen`.
+- Full-field database parity passed on the isolated Neon branch. Canonical MD5 values are Asset Master `211bebe45157b6156666f6e4ad3e4a58`, Hotel 57 project header `9c8149173037a1744dcd026586686c20`, and all work packages `761af437cedbc4db126223967480af84`.
+- Two isolated migration records report completed counts 19/19 and 72/72. Existing Task data on the same temporary branch remains 75 total / 75 distinct IDs.
+- Additive schema introduces only `assets`, `development_projects`, `development_work_packages`, their constraints/FKs and indexes. Schema diff shows no modification to existing Task tables, views, functions, roles, permissions, triggers, policies or extensions.
+- Runtime Asset/Development store is read-only during the pilot. Build verification rejects `INSERT`, `UPDATE`, `DELETE` and `TRUNCATE` in this runtime store.
+- Asset and Development activation are independent and fail-closed: `OPS_ASSET_SOURCE=postgres` + `OPS_ASSET_DB_APPROVED=true`, and `OPS_DEVELOPMENT_SOURCE=postgres` + `OPS_DEVELOPMENT_DB_APPROVED=true`, in addition to configured database and verified 613 Workspace session/domain.
+- `/assets` can use the 19-Asset PostgreSQL snapshot and `/assets/[id]` exposes physical and financial Asset Master detail read-only. The UI labels task counts `Direct open tasks` because 12 current Tasks use the generic `Hotels` bucket and must not be guessed onto individual Assets.
+- The Asset project count is labeled `Migrated projects` during staged rollout. Only Hotel 57 is currently in the Development pilot.
+- `/projects/PRJ-0001` exposes the complete Hotel 57 project header, current focus and all 72 work packages when the Development gate is approved. Other Development projects remain on the current transition view until separately migrated and verified.
+- `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK` is part of every build alongside all existing Task verification scripts.
+- Production schema/data and Vercel Asset/Development gates have NOT been changed yet. Production migration requires explicit approval after the final Preview build.
+
 ## Verification status
 
-Passed on Vercel Preview and Production:
+Passed on Vercel Preview and Production for Tasks:
 
 - `POSTGRES_TASK_STORE_VERIFICATION_OK`
 - `TASK_INPUT_VALIDATION_OK`
@@ -88,23 +106,23 @@ Passed on Vercel Preview and Production:
 - TypeScript
 - route generation for `/tasks`, `/api/tasks`, `/api/tasks/[id]`, `/api/tasks/[id]/updates`, `/api/verify/task-db`, `/api/verify/task-db-write`, `/verify/task-db-write`
 
+Asset/Development pilot verification:
+
+- `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`
+- first complete pilot Preview passed all Task checks, the portfolio pilot check, TypeScript and Next.js with dynamic `/projects/[id]`
+- isolated Neon parity: 19/19 Assets and 72/72 Hotel 57 work packages with exact full-field MD5 matches
+- schema diff is additive only
+- latest Asset-detail Preview must pass before Production migration approval
+
 Database/runtime verification passed:
 
 - 75 total tasks
 - 44 DATA / 31 ARCHIVE
-- 75 distinct IDs
-- 0 missing IDs across TSK-0001..TSK-0075
-- normalized DB checksum equals source snapshot checksum
-- 43 legacy task updates
-- 75 legacy audit events
+- 75 distinct Task IDs
 - migration status completed 75/75
-- authenticated Production `/api/verify/task-db` returned `ok=true`
-- Production runtime reports `taskDatabaseWritesEnabled=true`
-- reversible write probe used temporary `TSK-0076` and passed create/update/taskUpdate/auditTrail/cleanup
-- write probe baselineCount=75 and finalCount=75
-- direct Neon post-test check confirmed zero test residue
-- after production hardening and CRUD deployment, direct Neon checks remained 75 total / 75 distinct / 0 active WEBAPP tasks
-- unauthenticated Production `/api/tasks` returns HTTP 401 `AUTH_REQUIRED` with `Cache-Control: no-store`
+- authenticated Production Task read/write verification complete
+- after Task CRUD deployment, direct Neon checks remained 75 total / 75 distinct / 0 active WEBAPP tasks
+- Asset/Development temporary branch retained those 75 Tasks unchanged while adding the isolated 19/1/72 pilot dataset
 
 ## Current activation status
 
@@ -120,17 +138,17 @@ OPS_TASK_DB_WRITES_ENABLED=true
 
 The original Task Sheet remains historical/read-only migration input and receives no writeback. Do not commit `DATABASE_URL` or any database credential.
 
-Production hardening and productive Task CRUD are both on `main`. Commit `bb6fe97b774c11eadb66203f4017e38e32cabb5e` deployed successfully to Vercel Production and is READY. Deployment itself changed no Task rows: direct Neon verification after rollout remained 75 tasks / 75 distinct IDs / 0 WEBAPP tasks. The next major product block is Asset/Development transition work; their existing Sheets remain read-only until their own checked migrations are approved.
+Asset and Development PostgreSQL sources remain intentionally NOT activated in Production. Their existing Sheets remain authoritative transition sources until the additive Production schema, 19 Asset records and Hotel 57 pilot are explicitly approved, migrated, parity-checked again, and the independent Vercel gates are enabled.
 
 ## Handoff
 
 1. Read the persistent Drive architecture document fully.
-2. Inspect current GitHub `main` before changes.
+2. Inspect current GitHub `main` and `feature/asset-development-postgres-pilot` before changes.
 3. Existing production Sheets remain read-only and must not be modified.
-4. PostgreSQL contains the verified 75-task legacy migration and is the operative Task source of truth.
-5. Authenticated Production read and reversible write verification are complete; write gate is enabled.
-6. Production hardening is complete: concurrency-safe Task IDs and explicit `no-store` for session/Task API responses.
-7. Productive Task CRUD is live on `/tasks`: create/edit operational fields and add updates/comments against PostgreSQL.
-8. Optimistic concurrency is active through Task version checks; stale edits return HTTP 409 and local drafts are not automatically discarded.
-9. Latest post-deploy database verification is 75 total / 75 distinct / 0 WEBAPP tasks, so the rollout itself changed no Task data.
-10. Next checked engineering block: continue Asset/Development integration separately. Do not reintroduce Task Sheet synchronization or writeback.
+4. Tasks remain fully production-operative in PostgreSQL with verified 75-task migration and CRUD.
+5. Asset/Development pilot is isolated on Neon `br-old-mud-a6ify2sw`; Production Neon main has not received the new tables or data.
+6. Isolated pilot parity is complete: 19 Assets, 1 Hotel 57 Development project, 72 work packages; exact full-field MD5 checks match source snapshots.
+7. Task data on the isolated branch remains unchanged at 75/75.
+8. Asset/Development runtime code is fail-closed and read-only, with separate approval gates. Shared `Hotels` Tasks are deliberately not guessed onto individual Assets.
+9. Before Production migration: require final Feature Preview to pass all Task checks, `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`, TypeScript, Next.js, `/assets/[id]` and `/projects/[id]` route generation.
+10. After final Preview, obtain explicit approval before applying the additive schema/data to Neon Production main. Then re-run 19/19 + 72/72 full-field parity before enabling Vercel Asset/Development gates. Do not reintroduce Sheet writeback.

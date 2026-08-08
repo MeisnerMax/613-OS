@@ -34,6 +34,11 @@ export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
   };
 }
 
+export async function getAssetById(assetId: string) {
+  const provider = await selectAssetProvider();
+  return provider.reader.getAsset(assetId);
+}
+
 export async function getProjectWorkPackages(projectId: string) {
   const provider = await selectDevelopmentProvider();
   if (provider.reader) return provider.reader.listWorkPackages(projectId);
