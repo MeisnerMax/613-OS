@@ -51,6 +51,7 @@ for (const protectedTable of ["tasks", "task_updates", "activity_events", "migra
 assert(projectDetailPage.includes("getDevelopmentProjectDetail"), "Project detail metadata read is missing.");
 assert(projectDetailPage.includes("getProjectWorkPackages"), "Project work-package read is missing.");
 assert(projectDetailPage.includes("packages.map"), "Project work-package table is missing.");
+assert(assetsPage.includes('export const dynamic = "force-dynamic"'), "Asset overview must stay dynamic so the Workspace session gate runs at request time.");
 assert(assetsPage.includes("Direct open tasks"), "Asset task metric must disclose direct-only linkage.");
 assert(assetsPage.includes("Migrated projects"), "Asset project metric must disclose staged migration scope.");
 assert(assetsPage.includes('a.status === "Sold" ? "sold"'), "Sold Assets need a distinct visual state.");
