@@ -39,6 +39,12 @@ export async function getAssetById(assetId: string) {
   return provider.reader.getAsset(assetId);
 }
 
+export async function getMigratedDevelopmentProjectIds() {
+  const provider = await selectDevelopmentProvider();
+  if (!provider.reader) return [];
+  return provider.reader.listProjectIds();
+}
+
 export async function getProjectWorkPackages(projectId: string) {
   const provider = await selectDevelopmentProvider();
   if (provider.reader) return provider.reader.listWorkPackages(projectId);
