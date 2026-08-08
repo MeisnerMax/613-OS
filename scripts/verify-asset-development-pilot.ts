@@ -75,8 +75,8 @@ assert(runtimeVerifier.includes("require613WorkspaceSession"), "Portfolio runtim
 assert(runtimeVerifier.includes('"Cache-Control": "no-store"'), "Portfolio runtime verifier must disable caching.");
 assert(runtimeVerifier.includes("taskBaseline"), "Portfolio verifier must protect the existing 75-task baseline.");
 assert(runtimeVerifier.includes("assets?.total === 19"), "Portfolio verifier must enforce 19 Asset records.");
-assert(runtimeVerifier.includes("development?.projects === 3"), "Portfolio verifier must enforce the three-project staged Development scope.");
-assert(runtimeVerifier.includes("development.packages === 216"), "Portfolio verifier must enforce the 216-package staged Development scope.");
+assert(runtimeVerifier.includes("development?.projects === 4"), "Portfolio verifier must enforce the four-project staged Development scope.");
+assert(runtimeVerifier.includes("development.packages === 288"), "Portfolio verifier must enforce the 288-package staged Development scope.");
 assert(runtimeVerifier.includes("hotel57.packages === 72"), "Portfolio verifier must enforce 72 Hotel 57 packages.");
 assert(runtimeVerifier.includes('hotel57.assetId === "A004"'), "Hotel 57 Asset link verification is missing.");
 assert(runtimeVerifier.includes("hahnmuehle.packages === 72"), "Portfolio verifier must enforce 72 Hahnmuehle packages.");
@@ -89,10 +89,16 @@ assert(runtimeVerifier.includes('square.assetId === "A010"'), "Square Asset link
 assert(runtimeVerifier.includes("square.done === 3"), "Square completed-package baseline is missing.");
 assert(runtimeVerifier.includes("square.inProgress === 5"), "Square in-progress baseline is missing.");
 assert(runtimeVerifier.includes("square.notStarted === 64"), "Square not-started baseline is missing.");
+assert(runtimeVerifier.includes("adamRiese.packages === 72"), "Portfolio verifier must enforce 72 Adam Riese packages.");
+assert(runtimeVerifier.includes('adamRiese.assetId === "A008"'), "Adam Riese Asset link verification is missing.");
+assert(runtimeVerifier.includes("adamRiese.done === 4"), "Adam Riese completed-package baseline is missing.");
+assert(runtimeVerifier.includes("adamRiese.inProgress === 2"), "Adam Riese in-progress baseline is missing.");
+assert(runtimeVerifier.includes("adamRiese.notStarted === 66"), "Adam Riese not-started baseline is missing.");
 assert(runtimeVerifier.includes("legacy-asset-import-2026-08-07"), "Asset migration marker verification is missing.");
 assert(runtimeVerifier.includes("legacy-development-hotel57-import-2026-08-07"), "Hotel 57 migration marker verification is missing.");
 assert(runtimeVerifier.includes("legacy-development-hahnmuehle-import-2026-08-08"), "Hahnmuehle migration marker verification is missing.");
 assert(runtimeVerifier.includes("legacy-development-square-import-2026-08-08"), "Square migration marker verification is missing.");
+assert(runtimeVerifier.includes("legacy-development-adamriese-import-2026-08-08"), "Adam Riese migration marker verification is missing.");
 assert(!/\b(INSERT|UPDATE|DELETE|TRUNCATE)\b/i.test(runtimeVerifier), "Portfolio runtime verifier must be read-only.");
 assert(!runtimeVerifier.includes("market_value"), "Portfolio runtime verifier must not expose financial values.");
 assert(!runtimeVerifier.includes("description"), "Portfolio runtime verifier must not expose descriptive source content.");

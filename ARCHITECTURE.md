@@ -2,8 +2,8 @@
 
 ## Immutable rules
 
-- Existing production source files are READ ONLY unless the user later gives an explicit file-specific write instruction.
-- Do not modify `Task_Overview_613Group`, `Development_Projects_DE`, `Asset_Overview_v4`, existing production calendars, or other current production source files from 613 OS transition code.
+- Existing production source files are READ ONLY unless the user gives an explicit file-specific write instruction.
+- Do not modify `Task_Overview_613Group`, `Development_Projects_DE`, `Asset_Overview_v4`, existing production calendars, or other legacy production sources from 613 OS transition code.
 - New Development migrations are staged on isolated Neon/Git branches and verified before any Production data change.
 - Before every work step: checked plan. After every work step: verification.
 - Keep this file and the persistent Drive document `613 OS · Architecture & Handoff` current.
@@ -25,10 +25,10 @@
 
 ### Tasks
 
-PostgreSQL is the operative production source of truth.
+PostgreSQL is the operative Production source of truth.
 
 - 75/75 unique Tasks migrated and verified (`TSK-0001` through `TSK-0075`).
-- Task read/write runtime is production verified.
+- Task read/write runtime is Production verified.
 - Task updates/comments and activity audit events are persisted in PostgreSQL.
 - Task creation uses concurrency-safe ID allocation.
 - Task edits use optimistic concurrency through `version`; stale updates return HTTP 409.
@@ -44,11 +44,11 @@ OPS_TASK_DB_WRITES_ENABLED=true
 
 ### Assets
 
-PostgreSQL is the approved production runtime source for the migrated Asset Master snapshot.
+PostgreSQL is the approved Production runtime source for the migrated Asset Master snapshot.
 
 - 19/19 unique Assets migrated and verified.
 - Status distribution: 9 Active / 8 Under examination / 2 Sold.
-- `/assets` and `/assets/[id]` are request-time dynamic and remain Workspace-session gated.
+- `/assets` and `/assets/[id]` are request-time dynamic and Workspace-session gated.
 - Task counts are deliberately labeled `Direct open tasks`; generic `Hotels` Tasks are not guessed onto individual Assets.
 - `Asset_Overview_v4` remains read-only and receives no writeback.
 
@@ -61,16 +61,17 @@ OPS_ASSET_DB_APPROVED=true
 
 ### Development
 
-Development is migrated project-by-project. PostgreSQL project detail is available only for project IDs that actually exist in the approved Development store.
+Development is migrated project-by-project. PostgreSQL project detail is available only for project IDs that exist in the approved Development store.
 
 Current Production:
 
 - `PRJ-0001` → `A004` (Hotel 57): 72/72 packages, 4 Erledigt / 6 In Bearbeitung / 62 Nicht begonnen.
 - `PRJ-0002` → `A005` (Hahnmühle): 72/72 packages, 3 Erledigt / 7 In Bearbeitung / 62 Nicht begonnen.
-- Total Production Development baseline: 2 projects / 144 work packages.
-- Both project imports passed full-field source↔database parity before Production cutover.
-- The Projects overview no longer hard-codes `PRJ-0001`: it queries migrated Development project IDs through the authenticated PostgreSQL provider and only those rows are clickable.
-- Non-migrated transition projects remain visible as summary rows but are intentionally non-clickable.
+- `PRJ-0003` → `A010` (Square): 72/72 packages, 3 Erledigt / 5 In Bearbeitung / 64 Nicht begonnen.
+- Total Production Development baseline: 3 projects / 216 work packages.
+- All three imports passed full-field source↔database parity before Production cutover.
+- Project navigation is generic: `/projects` queries migrated project IDs through the authenticated PostgreSQL provider and only those rows are clickable.
+- Non-migrated transition projects remain visible as summaries but are intentionally non-clickable.
 - `Development_Projects_DE` remains read-only and receives no writeback.
 
 Production gates:
@@ -100,13 +101,13 @@ Asset/Development runtime store remains read-only. Build verification rejects ru
 
 GitHub `main`:
 
-`7d9f292deb8537e006c0dc5faefcfddd56057a64`
+`b38301f62d7bb9d7063cf1d0a1d8d3d31b513468`
 
 Vercel Production:
 
-`dpl_4hyoLDswvT13qhNRa7P4rNw3dfws` — READY
+`dpl_8UXKK24GcmKVoGcyqGpCVYhvGU4w` — READY
 
-This deployment contains the generic migrated-project navigation fix. Build checks passed:
+Production build checks passed:
 
 - `POSTGRES_TASK_STORE_VERIFICATION_OK`
 - `TASK_INPUT_VALIDATION_OK`
@@ -116,18 +117,17 @@ This deployment contains the generic migrated-project navigation fix. Build chec
 - TypeScript
 - Next.js 16.3.0
 
-No runtime errors were found after the navigation deployment.
-
-The authenticated Production portfolio verifier baseline before Square remains:
+Production baseline after Square:
 
 - Tasks: 75/75
 - Assets: 19/19, status 9/8/2
-- Development: 2 projects / 144 packages
+- Development: 3 projects / 216 packages
 - Hotel 57: 72, status 4/6/62
 - Hahnmühle: 72, status 3/7/62
-- all corresponding migration markers completed
+- Square: 72, status 3/5/64
+- corresponding migration markers completed
 
-Unauthenticated portfolio verification remains fail-closed with HTTP 401 `AUTH_REQUIRED`.
+Unauthenticated portfolio verification remains fail-closed with HTTP 401 `AUTH_REQUIRED` and no Production runtime errors were found after the Square deployment.
 
 ## Development migration procedure
 
@@ -140,7 +140,7 @@ For every additional Development project:
 5. Verify unique project ID, Asset relation, package IDs/order and required fields.
 6. Clone current Production to an isolated Neon branch.
 7. Import only there first.
-8. Run full-field parity/checksums and verify the existing Tasks, Assets and already migrated Development data remain unchanged.
+8. Run full-field parity/checksums and verify existing Tasks, Assets and already migrated Development data remain unchanged.
 9. Extend only generic read-only runtime/build verification as required; avoid project-specific UI/store duplication.
 10. Require an exact-head green Vercel Preview.
 11. Recheck source freshness and Production absence immediately before the approval boundary.
@@ -148,56 +148,60 @@ For every additional Development project:
 13. Import atomically into Production, verify again, then merge/deploy the already-green feature head.
 14. Run authenticated Production `/api/verify/portfolio-db` and runtime-error checks.
 
-## Phase 3 isolated verification · Square
+## Phase 4 isolated verification · Adam Riese
 
-Next staged project: `PRJ-0003` → `A010` (Square).
+Next staged project: `PRJ-0004` → `A008` (Adam Riese).
 
 Source:
 
 - Read-only source file: `Development_Projects_DE`.
-- Source tab: `010_Square`.
+- Source tab: `008_AdamRiese`.
 - Source file `modifiedTime`: `2026-08-07T10:06:50.395Z` at snapshot selection.
-- Project header: status Planung, start 2026-07-12, planned end 2028-04-15, as-of 2026-08-08.
+- Project header: status Planung, start 2026-07-22, planned end 2028-04-15, as-of 2026-08-08.
+- Current focus: Grundstücks- und Rechtsunterlagen.
 
 Isolated database state:
 
-- Neon branch: `development-square-pilot-2026-08-08` (`br-empty-bonus-a65fy58r`), cloned from current Production.
-- Production was confirmed to contain Asset `A010` and zero `PRJ-0003` rows before staging.
-- Square snapshot: 72 unique packages, source order 1–72.
-- Status distribution: 3 Erledigt / 5 In Bearbeitung / 64 Nicht begonnen.
-- After isolated import: 3 Development projects / 216 packages.
-- Existing baselines remain unchanged: Tasks 75/75, Assets 19/19, Hotel 57 72/72, Hahnmühle 72/72.
-- Full-field source↔database payload parity passed exactly:
-  - project MD5 `ebe39ac285d79dd9724d0b221109d0e7`
-  - work-package MD5 `6f4b4b5e58cde2433570ece6af9f3f9d`
-- Isolated migration marker: `legacy-development-square-import-2026-08-08`, completed 72/72.
+- Neon branch: `development-adamriese-pilot-2026-08-08` (`br-long-water-a6kzmsts`), cloned from current Production.
+- Production was confirmed to contain Asset `A008` and zero `PRJ-0004` / Adam-Riese migration-marker rows before staging.
+- Adam Riese snapshot: 72 unique packages, source order 1–72.
+- Status distribution: 4 Erledigt / 2 In Bearbeitung / 66 Nicht begonnen.
+- After isolated import: 4 Development projects / 288 packages.
+- Existing baselines remain unchanged: Tasks 75/75, Assets 19/19, Hotel 57 72/72, Hahnmühle 72/72, Square 72/72.
+- Canonical source snapshot MD5 values:
+  - project `673a90c8bbac818e4a2ab71f424e2267`
+  - work packages `eef0e32d1a9261d0c51da87765a934a6`
+- Independent delimiter-based full-field source↔database parity also passed exactly:
+  - project `9104be8466965ab4976b3f413548eff5`
+  - work packages `b58f85052af892e8cf7b28d36664d687`
+- Isolated migration marker: `legacy-development-adamriese-import-2026-08-08`, completed 72/72.
 
 Feature verification:
 
-- Branch: `feature/development-migration-phase-3`.
-- Runtime verifier now protects the staged 3-project / 216-package baseline and Square `PRJ-0003 → A010`, 72 packages, status 3/5/64 plus its migration marker.
-- Build verifier protects the same scope and retains all existing security/navigation assertions.
-- Exact pre-documentation feature head: `63525e6a6bd4b3979a074947279ff56e85ed8c67`.
-- Vercel Preview: `dpl_A7ePrAabR2UFaJyCLwc6Pj2j2Pfr` — READY.
+- Branch: `feature/development-migration-phase-4`.
+- Runtime verifier protects the staged 4-project / 288-package baseline and Adam Riese `PRJ-0004 → A008`, 72 packages, status 4/2/66 plus its migration marker.
+- Build verifier protects the same scope while retaining all existing security/navigation assertions.
+- Exact verified feature head before this documentation commit: `bdb33312cfa98e2926abef520bbdb9025d9be195`.
+- Vercel Preview: `dpl_E8RLsNxrsbf2quj78oHGVbVUerz9` — READY.
 - All Task checks, `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`, TypeScript and Next.js 16.3.0 passed.
 - `/projects` and `/projects/[id]` remain dynamic.
 
-Production remains unchanged by Phase 3 staging: `PRJ-0003` has not been imported into Production.
+Production remains unchanged by Phase 4 staging: `PRJ-0004` has not been imported into Production.
 
 ## Current development branch
 
-`feature/development-migration-phase-3`
+`feature/development-migration-phase-4`
 
-Purpose: stage Square safely and stop before Production until explicit Square Production-data approval.
+Purpose: stage Adam Riese safely and stop before Production until explicit Adam-Riese Production-data approval.
 
 ## Handoff
 
 1. Production Tasks: PostgreSQL read/write, verified 75/75.
 2. Production Assets: PostgreSQL read-only runtime, verified 19/19.
-3. Production Development: Hotel 57 + Hahnmühle only, 2 projects / 144 packages.
+3. Production Development: Hotel 57 + Hahnmühle + Square, 3 projects / 216 packages.
 4. Production project navigation is generic: migrated projects are clickable based on authenticated PostgreSQL membership; non-migrated projects are not.
 5. Legacy Sheets remain read-only; never write back.
-6. Square `PRJ-0003 → A010` is fully imported and full-field verified only on isolated Neon branch `br-empty-bonus-a65fy58r`.
-7. Feature branch `feature/development-migration-phase-3` contains only the expanded read-only verifier/build guard plus this documentation; no schema migration or project-specific runtime path was needed.
-8. Before Square Production import: recheck `Development_Projects_DE` `modifiedTime`, verify `PRJ-0003=0` in Production and request explicit Production-data approval.
-9. After approval: atomic Production import, full baseline/hash verification, merge exact green feature head, verify Vercel Production, then require authenticated `/api/verify/portfolio-db` `ok=true` for 3 projects / 216 packages.
+6. Adam Riese `PRJ-0004 → A008` is fully imported and full-field verified only on isolated Neon branch `br-long-water-a6kzmsts`.
+7. Feature branch `feature/development-migration-phase-4` contains only the expanded read-only verifier/build guard plus this documentation; no schema migration or project-specific runtime path was needed.
+8. Before Adam Riese Production import: recheck `Development_Projects_DE` `modifiedTime`, verify `PRJ-0004=0` in Production and obtain explicit Production-data approval.
+9. After approval: atomic Production import, full baseline/hash verification, merge exact green feature head, verify Vercel Production, then require authenticated `/api/verify/portfolio-db` `ok=true` for 4 projects / 288 packages.
