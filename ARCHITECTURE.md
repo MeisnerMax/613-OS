@@ -100,13 +100,13 @@ Asset/Development runtime store remains read-only. Build verification rejects ru
 
 ## Current Production deployment state
 
-Current functional `main` after the read-only Project Gantt merge:
+Current Production `main`:
 
-`5a4942fc3e0aab8a32778f5205164991a49fb68e`
+`b6eb31aedb040ac007417eaad73172acd48c479f`
 
-Functional Vercel Production deployment:
+Current Vercel Production deployment:
 
-`dpl_CHExepaoFWD7zTHyvhyTqPM3K23L` — READY
+`dpl_8cVTzMp3tGtE9zTTVAMqje9gMjjX` — READY
 
 This Production deployment contains the completed 5-project / 360-package Development baseline plus the read-only Project Gantt Phase A. The build passed:
 
@@ -124,9 +124,9 @@ Production runtime checks after deployment:
 - unauthenticated `/api/verify/portfolio-db` returns HTTP 401 `AUTH_REQUIRED`.
 - unauthenticated Development project detail stays fail-closed and does not expose PostgreSQL payloads.
 - no error/fatal runtime logs were found after deployment.
-- authenticated visual browser verification of the new Gantt is still pending user confirmation.
+- authenticated visual browser verification of the Gantt was confirmed successfully by the user on 09.08.2026.
 
-Current verified database baseline remains unchanged by the Gantt phase:
+Current verified database baseline remains unchanged:
 
 - Tasks: 75/75
 - Assets: 19/19, status 9/8/2
@@ -213,7 +213,7 @@ The product roadmap has therefore returned to application functionality rather t
 
 ## Product roadmap phase · Read-only Project Gantt · 09.08.2026
 
-The next planned block after stabilizing Tasks/Assets/Projects is Gantt + Dependencies. Phase A deliberately implements only the part that is already data-safe: a real read-only Gantt timeline from existing Development work-package dates.
+The planned Gantt + Dependencies block was split deliberately. Phase A implemented only the part that is already data-safe: a real read-only Gantt timeline from existing Development work-package dates.
 
 Verified Production data suitability before implementation:
 
@@ -235,18 +235,42 @@ Implemented Production boundary:
 - Final documentation-inclusive feature head `d145f9a9cce787c98c7df973b98609f228ae282a` passed Vercel Preview `dpl_ED2YezvMWJeHQAMRagp1U1Phn1Tj`.
 - PR #7 merged with expected-head guard as `5a4942fc3e0aab8a32778f5205164991a49fb68e`.
 - Functional Production deployment `dpl_CHExepaoFWD7zTHyvhyTqPM3K23L` is READY and passed all Task checks, `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`, TypeScript and Next.js 16.3.0.
+- Documentation-sync Production deployment `dpl_8cVTzMp3tGtE9zTTVAMqje9gMjjX` on `b6eb31aedb040ac007417eaad73172acd48c479f` is READY with the same runtime code and all checks green.
 - Production security checks remain green and no error/fatal runtime logs were found.
+- Authenticated browser verification was confirmed successfully by the user on 09.08.2026. Gantt Phase A is fully closed.
 
-Remaining closure gate: authenticated browser verification on at least one migrated project must confirm that the Gantt renders correctly with real PostgreSQL data, including month timeline, bars, phase groups, horizontal scrolling and dependency source text.
+Dependency source values remain free text. A future technical dependency-graph phase requires explicit normalization to unambiguous package IDs and its own checked design/data boundary.
+
+## Product roadmap phase · Global Search Phase A · 09.08.2026
+
+The original MVP sequence was re-read from the persistent architecture handoff rather than inferred. Task Drawer and Task Updates are already productive. The `activity_events` table was checked read-only and currently contains 75 events, all `task.legacy_imported`; a standalone global Activity view would therefore add little operational value at this point. Task filtering exists only as status tabs, while the global header search was still decorative. The next useful incomplete MVP block is therefore Filter & Search, starting with Global Search Phase A.
+
+Implementation boundary:
+
+- Isolated feature branch: `feature/global-search-phase-a`, based exactly on Production `main` `b6eb31aedb040ac007417eaad73172acd48c479f`.
+- New `/api/search?q=…` route is request-time dynamic, `Cache-Control: no-store`, and requires `require613WorkspaceSession()` before any data read.
+- Search fails closed unless the existing PostgreSQL Task source and approved Asset/Development database gates are active.
+- Phase A searches only the already productive core entities Tasks, Assets and migrated Development Projects.
+- Internal matching can use existing operational text fields, but the response is deliberately minimal: entity type, ID, title, short context line and destination URL. Asset financial fields are excluded.
+- Task results deep-link to `/tasks?task=TSK-…` and reuse the existing Task Drawer; the existing Task CRUD implementation is not duplicated or changed.
+- Asset results link to `/assets/[id]`; Project results link to `/projects/[id]`.
+- Header search supports a short debounce, request cancellation, Cmd/Ctrl+K focus, Escape close, loading/empty/auth states and scoped result-dropdown styling.
+- Closing a Task Drawer opened through search removes the `task` query parameter without reloading the page.
+- No database mutation, schema migration, API write path, Task/Asset/Development gate change or legacy Sheet writeback is part of this phase.
+- Build verification now includes `scripts/verify-global-search.ts` and emits `GLOBAL_SEARCH_VERIFICATION_OK` in addition to all existing Task/Portfolio checks.
+- Functional feature head `de51007a114f2d8efce5772155f72ee59a4fbca0` passed Vercel Preview `dpl_2JqMjg5ghDEgLFWqgKPT2JFFqE4v`: all existing Task/Portfolio checks, `GLOBAL_SEARCH_VERIFICATION_OK`, TypeScript and Next.js 16.3.0 are green; `/api/search` is dynamic.
+
+Next gate: this documentation-inclusive feature head must pass an exact-head Vercel Preview. Only then may the read-only feature be merged to `main`. After Production deployment, verify unauthenticated search remains 401/fail-closed and perform one authenticated browser test covering at least a Task deep-link and an Asset or Project result.
 
 ## Handoff
 
 1. Production Tasks: PostgreSQL read/write, verified 75/75.
 2. Production Assets: PostgreSQL read-only runtime, verified 19/19.
 3. Production Development: Hotel 57 + Hahnmühle + Square + Adam Riese + Old Post, 5 projects / 360 packages.
-4. Functional Production `main` is `5a4942fc3e0aab8a32778f5205164991a49fb68e`; Vercel `dpl_CHExepaoFWD7zTHyvhyTqPM3K23L` is READY.
+4. Current Production `main` is `b6eb31aedb040ac007417eaad73172acd48c479f`; Vercel `dpl_8cVTzMp3tGtE9zTTVAMqje9gMjjX` is READY.
 5. Production project navigation is generic and database-membership based.
 6. Legacy Sheets remain read-only and receive no writeback.
-7. Project Gantt Phase A is live in Production and remains strictly read-only; it required no database/schema/API/source changes.
-8. Dependency source values are free text and must not be converted into arrows/technical dependencies by guesswork. A later dependency-normalization phase requires its own checked design and approval boundary.
-9. Authenticated browser verification of the Gantt is the only remaining closure gate before proceeding to the next checked roadmap step.
+7. Project Gantt Phase A is fully closed after successful authenticated browser verification; it remains strictly read-only and no technical dependency edges are inferred from free text.
+8. Current isolated product work is `feature/global-search-phase-a`. Functional head `de51007a114f2d8efce5772155f72ee59a4fbca0` passed Preview `dpl_2JqMjg5ghDEgLFWqgKPT2JFFqE4v` with `GLOBAL_SEARCH_VERIFICATION_OK` plus all existing checks.
+9. Global Search Phase A is Workspace-gated/read-only and covers Tasks, Assets and migrated Projects only. No database/schema/source/gate mutation is authorized or required.
+10. Before merge: require an exact-head green Preview for the final documentation-inclusive branch, confirm the branch diff contains only the intended search/documentation files, and verify `main` has not moved unexpectedly.
