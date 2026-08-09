@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type ReactNode } from "react";
 
 const nav = [
   ["/", "⌂", "Home"],
@@ -12,8 +12,101 @@ const nav = [
   ["/projects", "◇", "Projects"],
 ] as const;
 
+type SearchResult = {
+  type: "task" | "asset" | "project";
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+};
+
+type SearchResponse = {
+  results?: SearchResult[];
+  error?: string;
+};
+
 export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const searchInput = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchBusy, setSearchBusy] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function handleShortcut(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInput.current?.focus();
+        setSearchOpen(true);
+        return;
+      }
+      if (event.key === "Escape" && searchOpen) {
+        setSearchOpen(false);
+        searchInput.current?.blur();
+      }
+    }
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    const needle = query.trim();
+    if (needle.length < 2) {
+      setResults([]);
+      setSearchBusy(false);
+      setSearchError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearchBusy(true);
+      setSearchError(null);
+
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(needle)}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data = await response.json() as SearchResponse;
+        if (!response.ok) {
+          setResults([]);
+          setSearchError(searchErrorMessage(response.status, data.error));
+          return;
+        }
+        setResults(data.results ?? []);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setResults([]);
+        setSearchError("Search could not be loaded.");
+      } finally {
+        if (!controller.signal.aborted) setSearchBusy(false);
+      }
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
+
+  function closeSearch() {
+    setSearchOpen(false);
+    setQuery("");
+    setResults([]);
+    setSearchError(null);
+  }
+
+  function handleSearchBlur(event: FocusEvent<HTMLDivElement>) {
+    const next = event.relatedTarget;
+    if (next instanceof Node && event.currentTarget.contains(next)) return;
+    setSearchOpen(false);
+  }
+
+  const showSearchResults = searchOpen && query.trim().length >= 2;
 
   return (
     <div className="shell">
@@ -33,11 +126,52 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
       <section className="workspace">
         <header className="topbar">
-          <div className="search"><span>⌕</span><input placeholder="Search assets, projects, tasks…" aria-label="Global search"/><kbd>⌘ K</kbd></div>
+          <div className="search" onBlur={handleSearchBlur}>
+            <span>⌕</span>
+            <input
+              ref={searchInput}
+              value={query}
+              onChange={(event) => { setQuery(event.target.value); setSearchOpen(true); }}
+              onFocus={() => setSearchOpen(true)}
+              placeholder="Search assets, projects, tasks…"
+              aria-label="Global search"
+              aria-expanded={showSearchResults}
+              aria-controls="global-search-results"
+              autoComplete="off"
+            />
+            <kbd>⌘ K</kbd>
+            {showSearchResults ? <div className="searchResults" id="global-search-results" role="listbox">
+              {searchBusy ? <div className="searchState">Searching…</div> : null}
+              {!searchBusy && searchError ? <div className="searchState searchStateError">{searchError}</div> : null}
+              {!searchBusy && !searchError && results.length === 0 ? <div className="searchState">No matching Tasks, Assets or Projects.</div> : null}
+              {!searchBusy && !searchError ? results.map((result) => <Link
+                key={`${result.type}-${result.id}`}
+                href={result.href}
+                className="searchResult"
+                role="option"
+                onClick={closeSearch}
+              >
+                <span className={`searchResultType ${result.type}`}>{result.type}</span>
+                <span className="searchResultText">
+                  <strong>{result.title}</strong>
+                  <small>{result.id}{result.subtitle ? ` · ${result.subtitle}` : ""}</small>
+                </span>
+                <span className="searchResultArrow">↗</span>
+              </Link>) : null}
+            </div> : null}
+          </div>
           <div className="actions"><button className="bell" aria-label="Notifications">◇<i /></button><button className="create">＋ Create</button></div>
         </header>
         <main className="content">{children}</main>
       </section>
     </div>
   );
+}
+
+function searchErrorMessage(status: number, code?: string) {
+  if (status === 401 || code === "AUTH_REQUIRED") return "Connect your 613 Workspace session to search.";
+  if (status === 403 || code === "WORKSPACE_DOMAIN_NOT_ALLOWED") return "This Google Workspace account is not allowed.";
+  if (status === 503 || code === "SEARCH_SOURCE_NOT_READY") return "Search is temporarily unavailable while the database source is locked.";
+  if (status === 400 || code === "QUERY_TOO_LONG") return "Search text is too long.";
+  return "Search could not be loaded.";
 }
