@@ -2,7 +2,7 @@ import type { Priority, Task, TaskStatus } from "./domain";
 
 export type TaskStatusFilter = "All" | TaskStatus;
 export type TaskPriorityFilter = "All" | Priority;
-export type TaskAttentionFilter = "All" | "Needs attention" | "Overdue" | "Waiting";
+export type TaskAttentionFilter = "All" | "Needs attention" | "Overdue";
 
 export type TaskFilterState = {
   status: TaskStatusFilter;
@@ -60,8 +60,7 @@ export function hasActiveTaskFilters(filters: TaskFilterState) {
 function matchesAttention(task: Task, attention: TaskAttentionFilter) {
   if (attention === "All") return true;
   if (attention === "Needs attention") return Boolean(task.flag);
-  if (attention === "Overdue") return task.flag === "overdue";
-  return task.flag === "waiting";
+  return task.flag === "overdue";
 }
 
 function searchableTaskText(task: Task) {
