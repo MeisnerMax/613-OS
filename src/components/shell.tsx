@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type FocusEvent, type ReactNode } from "react";
+import searchStyles from "./shell-search.module.css";
 
 const nav = [
   ["/", "⌂", "Home"],
@@ -126,7 +127,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
       <section className="workspace">
         <header className="topbar">
-          <div className="search" onBlur={handleSearchBlur}>
+          <div className={`search ${searchStyles.host}`} onBlur={handleSearchBlur}>
             <span>⌕</span>
             <input
               ref={searchInput}
@@ -140,23 +141,23 @@ export function Shell({ children }: { children: ReactNode }) {
               autoComplete="off"
             />
             <kbd>⌘ K</kbd>
-            {showSearchResults ? <div className="searchResults" id="global-search-results" role="listbox">
-              {searchBusy ? <div className="searchState">Searching…</div> : null}
-              {!searchBusy && searchError ? <div className="searchState searchStateError">{searchError}</div> : null}
-              {!searchBusy && !searchError && results.length === 0 ? <div className="searchState">No matching Tasks, Assets or Projects.</div> : null}
+            {showSearchResults ? <div className={searchStyles.results} id="global-search-results" role="listbox">
+              {searchBusy ? <div className={searchStyles.state}>Searching…</div> : null}
+              {!searchBusy && searchError ? <div className={`${searchStyles.state} ${searchStyles.error}`}>{searchError}</div> : null}
+              {!searchBusy && !searchError && results.length === 0 ? <div className={searchStyles.state}>No matching Tasks, Assets or Projects.</div> : null}
               {!searchBusy && !searchError ? results.map((result) => <Link
                 key={`${result.type}-${result.id}`}
                 href={result.href}
-                className="searchResult"
+                className={searchStyles.result}
                 role="option"
                 onClick={closeSearch}
               >
-                <span className={`searchResultType ${result.type}`}>{result.type}</span>
-                <span className="searchResultText">
+                <span className={`${searchStyles.type} ${searchTypeClass(result.type)}`}>{result.type}</span>
+                <span className={searchStyles.text}>
                   <strong>{result.title}</strong>
                   <small>{result.id}{result.subtitle ? ` · ${result.subtitle}` : ""}</small>
                 </span>
-                <span className="searchResultArrow">↗</span>
+                <span className={searchStyles.arrow}>↗</span>
               </Link>) : null}
             </div> : null}
           </div>
@@ -166,6 +167,12 @@ export function Shell({ children }: { children: ReactNode }) {
       </section>
     </div>
   );
+}
+
+function searchTypeClass(type: SearchResult["type"]) {
+  if (type === "task") return searchStyles.task;
+  if (type === "asset") return searchStyles.asset;
+  return searchStyles.project;
 }
 
 function searchErrorMessage(status: number, code?: string) {
