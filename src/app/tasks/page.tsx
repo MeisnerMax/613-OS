@@ -7,13 +7,15 @@ import {
 } from "@/lib/auth/google-workspace";
 import "./task-crud.css";
 
-export default async function TasksPage() {
-  const [{ tasks, sourceMode }, session] = await Promise.all([
+export default async function TasksPage({ searchParams }: { searchParams: Promise<{ task?: string | string[] }> }) {
+  const [{ tasks, sourceMode }, session, params] = await Promise.all([
     getPortfolioSnapshot(),
     getGoogleWorkspaceSession(),
+    searchParams,
   ]);
   const oauthConfigured = isGoogleOAuthConfigured();
   const sourceLabel = sourceMode === "postgres" ? "613 OS database" : sourceMode === "mock-read-only" ? "isolated mock read model" : "read-only Google Sheets";
+  const initialTaskId = typeof params.task === "string" ? params.task : undefined;
 
   return <div className="stack">
     <Header eyebrow="Operations" title="Tasks" description={`One task record, multiple views. Current source: ${sourceLabel}.`}/>
@@ -35,6 +37,6 @@ export default async function TasksPage() {
           ? <a className="authAction" href="/api/auth/google/start">Connect Google Workspace</a>
           : <span className="authHint">Set the OAuth environment variables first.</span>}
     </section>
-    <TaskTable tasks={tasks}/>
+    <TaskTable tasks={tasks} initialSelectedId={initialTaskId}/>
   </div>;
 }

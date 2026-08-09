@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Task, TaskStatus } from "@/lib/domain";
 import { PriorityTag, Status } from "@/components/ui";
 import { TaskDrawer } from "@/components/task-drawer";
@@ -13,13 +13,19 @@ function initials(value: string) {
   return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
 }
 
-export function TaskTable({ tasks }: { tasks: Task[] }) {
+export function TaskTable({ tasks, initialSelectedId }: { tasks: Task[]; initialSelectedId?: string }) {
   const [rows, setRows] = useState<Task[]>(tasks);
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
   const [creating, setCreating] = useState(false);
   const selected = useMemo(() => rows.find((task) => task.id === selectedId) ?? null, [rows, selectedId]);
   const visible = useMemo(() => filter === "All" ? rows : rows.filter((task) => task.status === filter), [filter, rows]);
+
+  useEffect(() => {
+    if (!initialSelectedId) return;
+    setCreating(false);
+    setSelectedId(initialSelectedId);
+  }, [initialSelectedId]);
 
   function applyTask(task: Task, options?: { created?: boolean }) {
     setRows((current) => {
@@ -30,6 +36,16 @@ export function TaskTable({ tasks }: { tasks: Task[] }) {
     setCreating(false);
     setSelectedId(task.id);
     if (options?.created) setFilter("All");
+  }
+
+  function closeDrawer() {
+    setCreating(false);
+    setSelectedId(null);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("task")) return;
+    url.searchParams.delete("task");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
   return <>
@@ -47,7 +63,7 @@ export function TaskTable({ tasks }: { tasks: Task[] }) {
     <TaskDrawer
       task={selected}
       creating={creating}
-      onClose={() => { setCreating(false); setSelectedId(null); }}
+      onClose={closeDrawer}
       onTaskChanged={(task, options) => applyTask(task, options)}
     />
   </>;
