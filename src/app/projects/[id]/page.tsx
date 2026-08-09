@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Header, PriorityTag } from "@/components/ui";
 import { getDevelopmentProjectDetail, getProjectWorkPackages } from "@/lib/read-model";
+import { GanttTimeline } from "./GanttTimeline";
 import "./project-detail.css";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       <div><span>Start</span><strong>{project.currentStartDate ?? "—"}</strong></div>
       <div><span>Complete when</span><strong>{project.currentCompletionEvidence ?? "—"}</strong></div>
     </div>
+
+    <GanttTimeline packages={packages} projectStart={project.startDate} projectEnd={project.plannedEndDate} />
 
     <div className="tableWrap">
       <table className="table developmentTable">
