@@ -13,10 +13,10 @@ function initials(value: string) {
   return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
 }
 
-export function TaskTable({ tasks }: { tasks: Task[] }) {
+export function TaskTable({ tasks, initialSelectedId }: { tasks: Task[]; initialSelectedId?: string }) {
   const [rows, setRows] = useState<Task[]>(tasks);
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
   const [creating, setCreating] = useState(false);
   const selected = useMemo(() => rows.find((task) => task.id === selectedId) ?? null, [rows, selectedId]);
   const visible = useMemo(() => filter === "All" ? rows : rows.filter((task) => task.status === filter), [filter, rows]);
