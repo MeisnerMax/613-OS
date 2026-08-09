@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Task, TaskStatus } from "@/lib/domain";
 import { PriorityTag, Status } from "@/components/ui";
 import { TaskDrawer } from "@/components/task-drawer";
@@ -21,6 +21,12 @@ export function TaskTable({ tasks, initialSelectedId }: { tasks: Task[]; initial
   const selected = useMemo(() => rows.find((task) => task.id === selectedId) ?? null, [rows, selectedId]);
   const visible = useMemo(() => filter === "All" ? rows : rows.filter((task) => task.status === filter), [filter, rows]);
 
+  useEffect(() => {
+    if (!initialSelectedId) return;
+    setCreating(false);
+    setSelectedId(initialSelectedId);
+  }, [initialSelectedId]);
+
   function applyTask(task: Task, options?: { created?: boolean }) {
     setRows((current) => {
       const exists = current.some((item) => item.id === task.id);
@@ -30,6 +36,16 @@ export function TaskTable({ tasks, initialSelectedId }: { tasks: Task[]; initial
     setCreating(false);
     setSelectedId(task.id);
     if (options?.created) setFilter("All");
+  }
+
+  function closeDrawer() {
+    setCreating(false);
+    setSelectedId(null);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("task")) return;
+    url.searchParams.delete("task");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
   return <>
@@ -47,7 +63,7 @@ export function TaskTable({ tasks, initialSelectedId }: { tasks: Task[]; initial
     <TaskDrawer
       task={selected}
       creating={creating}
-      onClose={() => { setCreating(false); setSelectedId(null); }}
+      onClose={closeDrawer}
       onTaskChanged={(task, options) => applyTask(task, options)}
     />
   </>;
