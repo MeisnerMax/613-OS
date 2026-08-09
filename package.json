@@ -5,7 +5,7 @@
   "description": "Internal operations workspace for 613 Investment Group",
   "scripts": {
     "dev": "next dev",
-    "build": "npm run verify:task-db && npm run verify:portfolio-pilot && npm run verify:search && npm run verify:notifications && next build",
+    "build": "npm run verify:task-db && npm run verify:portfolio-pilot && npm run verify:search && npm run verify:notifications && npm run verify:task-filters && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "verify:read-only": "tsx scripts/verify-read-only-adapters.ts && tsx scripts/verify-google-sheets-reader.ts && tsx scripts/verify-provider-selector.ts && tsx scripts/verify-google-oauth-validation.ts && tsx scripts/verify-my-work.ts",
@@ -15,6 +15,7 @@
     "verify:portfolio-pilot": "tsx scripts/verify-asset-development-pilot.ts",
     "verify:search": "tsx scripts/verify-global-search.ts",
     "verify:notifications": "tsx scripts/verify-basic-notifications.ts",
+    "verify:task-filters": "tsx scripts/verify-task-filters.ts",
     "verify:task-migration-snapshot": "tsx scripts/verify-task-migration-snapshot.ts",
     "import:tasks": "tsx scripts/import-task-migration.ts"
   },
