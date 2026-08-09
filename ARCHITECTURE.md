@@ -100,15 +100,17 @@ Asset/Development runtime store remains read-only. Build verification rejects ru
 
 ## Current Production deployment state
 
-Current Production `main`:
+Current runtime-bearing Production commit:
 
 `7a8ac766fcdba12f9aca58603984fe438c07da90`
 
-Current Vercel Production deployment:
+Runtime-bearing Production deployment:
 
 `dpl_J8SGF2ghbj4nvQdbG5gmjvfZy4i7` — READY
 
-This Production deployment contains the completed 5-project / 360-package Development baseline, read-only Project Gantt Phase A, Global Search Phase A, Basic Notifications Phase A and Task Filters Phase A. The build passed:
+Later documentation-only commits/deployments may advance `main` without changing the runtime code represented by this baseline.
+
+This Production runtime contains the completed 5-project / 360-package Development baseline, read-only Project Gantt Phase A, Global Search Phase A, Basic Notifications Phase A and Task Filters Phase A. The build passed:
 
 - `POSTGRES_TASK_STORE_VERIFICATION_OK`
 - `TASK_INPUT_VALIDATION_OK`
@@ -340,7 +342,7 @@ Implementation boundary:
 1. Production Tasks: PostgreSQL read/write, verified 75/75.
 2. Production Assets: PostgreSQL read-only runtime, verified 19/19.
 3. Production Development: Hotel 57 + Hahnmühle + Square + Adam Riese + Old Post, 5 projects / 360 packages.
-4. Current Production `main` is `7a8ac766fcdba12f9aca58603984fe438c07da90`; Vercel `dpl_J8SGF2ghbj4nvQdbG5gmjvfZy4i7` is READY.
+4. Runtime-bearing Production commit is `7a8ac766fcdba12f9aca58603984fe438c07da90`; runtime-bearing Vercel deployment `dpl_J8SGF2ghbj4nvQdbG5gmjvfZy4i7` is READY. Later documentation-only commits may advance `main` without changing this runtime baseline.
 5. Production project navigation is generic and database-membership based.
 6. Legacy Sheets remain read-only and receive no writeback.
 7. Project Gantt Phase A, Global Search Phase A, Basic Notifications Phase A and Task Filters Phase A are fully closed after successful authenticated browser verification.
