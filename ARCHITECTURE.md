@@ -102,13 +102,13 @@ Asset/Development runtime store remains read-only. Build verification rejects ru
 
 Current Production `main`:
 
-`a15da231028bd7a4bf206bcb37ca5bc4c03b01e0`
+`b6aecfa91f2945f41eb411f0f40c560f00fe1720`
 
 Current Vercel Production deployment:
 
-`dpl_FYHsma3ZJ2Fjqig6qsJiANp8gaE3` — READY
+`dpl_5oQJG9CeUVijiGcWjJGqfMjNubhb` — READY
 
-This Production deployment contains the completed 5-project / 360-package Development baseline, read-only Project Gantt Phase A and Global Search Phase A. The build passed:
+This Production deployment contains the completed 5-project / 360-package Development baseline, read-only Project Gantt Phase A, Global Search Phase A and Basic Notifications Phase A. The build passed:
 
 - `POSTGRES_TASK_STORE_VERIFICATION_OK`
 - `TASK_INPUT_VALIDATION_OK`
@@ -116,17 +116,19 @@ This Production deployment contains the completed 5-project / 360-package Develo
 - `TASK_CRUD_UI_VERIFICATION_OK`
 - `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`
 - `GLOBAL_SEARCH_VERIFICATION_OK`
+- `BASIC_NOTIFICATIONS_VERIFICATION_OK`
 - TypeScript
 - Next.js 16.3.0
 
 Production runtime checks after deployment:
 
 - `/api/auth/status` reports PostgreSQL sources and the approved Production gates.
+- unauthenticated `/api/notifications` returns HTTP 401 `AUTH_REQUIRED` with `Cache-Control: no-store`.
 - unauthenticated `/api/search?q=Hotel` returns HTTP 401 `AUTH_REQUIRED` with `Cache-Control: no-store`.
 - unauthenticated `/api/verify/portfolio-db` returns HTTP 401 `AUTH_REQUIRED`.
 - unauthenticated Development project detail stays fail-closed and does not expose PostgreSQL payloads.
 - no error/fatal runtime logs were found after deployment.
-- authenticated visual browser verification of Gantt and Global Search was confirmed successfully by the user on 09.08.2026.
+- authenticated visual browser verification of Gantt, Global Search and Basic Notifications was confirmed successfully by the user on 09.08.2026.
 
 Current verified database baseline remains unchanged:
 
@@ -280,7 +282,7 @@ Verified Production notification candidates as of 09.08.2026:
 - For the existing `currentMyWorkOwner()` / `Max Meisner`: 1 overdue deadline, 9 Waiting Tasks and 1 due-soon Task.
 - The overdue own Task is also Waiting. The derivation rule therefore produces one signal per Task with precedence `overdue > waiting > due-soon`, yielding 10 unique own notifications from the current Production snapshot rather than 11 duplicated signals.
 
-Implementation boundary:
+Implemented Production boundary:
 
 - Isolated feature branch `feature/basic-notifications-phase-a`, based exactly on Production `main` `a15da231028bd7a4bf206bcb37ca5bc4c03b01e0`.
 - `src/lib/notifications.ts` contains the pure/testable Task→Notification derivation and Berlin operational date helper.
@@ -290,23 +292,55 @@ Implementation boundary:
 - `/api/notifications` is request-time dynamic, `Cache-Control: no-store`, requires `require613WorkspaceSession()`, and fails closed unless the Task source is approved PostgreSQL.
 - The Shell Bell loads the current attention count and opens a scoped dropdown. Every notification deep-links to `/tasks?task=TSK-…` and reuses the existing Task Drawer.
 - Global Search and Notifications close each other; the existing Create button/navigation remain unchanged.
-- No database mutation, schema migration, Task write-path change, source/gate change or legacy Sheet writeback is part of this phase.
+- No database mutation, schema migration, Task write-path change, source/gate change or legacy Sheet writeback was part of this phase.
 - Build verification includes `scripts/verify-basic-notifications.ts`, which functionally tests owner filtering, one-signal-per-Task precedence/deduplication, the inclusive 7-day due-soon boundary, completed/other-owner exclusion and the Europe/Berlin date boundary; it also guards API read-only/security and Bell integration.
-- Functional feature head `34f11ab92560ee2fe8671d216fa933ffff99a32c` passed Vercel Preview `dpl_FAok1Yox6SJzstRivEkPbAd6kaX2`: all Task/Portfolio/Search checks plus `BASIC_NOTIFICATIONS_VERIFICATION_OK`, TypeScript and Next.js 16.3.0 are green; `/api/notifications` is dynamic.
-- Unauthenticated Preview `/api/notifications` returns HTTP 401 `AUTH_REQUIRED` with `Cache-Control: no-store`.
+- Functional feature head `34f11ab92560ee2fe8671d216fa933ffff99a32c` passed Vercel Preview `dpl_FAok1Yox6SJzstRivEkPbAd6kaX2`.
+- Final documentation-inclusive feature head `85484fa2ce48ebbb83e0630be17a1a53adce9e3b` passed Vercel Preview `dpl_GxvAeLaox9JTntVNajZJUcRGdLFW` with all Task/Portfolio/Search/Notifications checks, TypeScript and Next.js 16.3.0 green.
+- PR #9 merged with expected-head guard as `b6aecfa91f2945f41eb411f0f40c560f00fe1720`.
+- Production deployment `dpl_5oQJG9CeUVijiGcWjJGqfMjNubhb` is READY.
+- Production gates remained unchanged; unauthenticated `/api/notifications`, `/api/search?q=Hotel` and `/api/verify/portfolio-db` return HTTP 401 `AUTH_REQUIRED`; no error/fatal runtime logs were found.
+- Authenticated browser verification of Bell badge/dropdown and Task deep-link was confirmed successfully by the user on 09.08.2026. Basic Notifications Phase A is fully closed.
 
-Next gate: the documentation-inclusive feature head must pass an exact-head Vercel Preview. Only then may the feature be merged to `main`. After Production deployment, confirm Production gates remain unchanged, unauthenticated notifications stay 401/fail-closed, no runtime errors occur, and perform an authenticated browser test of the Bell count/dropdown plus one Task deep-link.
+## Product roadmap phase · Task Filters Phase A · 09.08.2026
+
+After closing Basic Notifications, the original MVP list and current code/data were rechecked. A global Activity page remains low-value because Production `activity_events` still contains only 75 `task.legacy_imported` rows. Technical Development dependency edges remain blocked because the 360 existing dependency values are descriptive free text rather than normalized package IDs. The remaining useful half of the original `Filter & Search` block is therefore Task Filters Phase A.
+
+Verified Production Task filter suitability:
+
+- 75 Tasks across 11 owner values, 3 priorities and 12 Property/Project values.
+- 43 Tasks are currently active.
+- Owner distribution is operationally non-trivial: Max Meisner 59, Ofir 4, Itzik/Oshri/Reza 2 each, further owners 1 each plus one unassigned Task.
+- Priority distribution: Medium 35 / High 24 / Low 16.
+- Largest Property/Project groups: Allee 7 21 / Hotels 18 / 613 Group (Company) 16 / Steinweg 36/38 6 / Steinweg 57 5.
+- Existing PostgreSQL Task mapping already defines Attention semantics: non-Done overdue deadline → `overdue`; otherwise Waiting → `waiting`; no new deadline logic is invented.
+
+Implementation boundary:
+
+- Isolated feature branch `feature/task-filters-phase-a`, based exactly on Production `main` `b6aecfa91f2945f41eb411f0f40c560f00fe1720`.
+- Existing status tabs remain unchanged: All / Open / In progress / Waiting / Done.
+- `src/lib/task-filters.ts` provides a pure, deterministic filter model for status, local text, owner, Property/Project, priority and attention.
+- Local Task text filtering matches Task ID, title, Property/Project, owner, category and next step.
+- Owner and Property/Project options are derived from the already loaded Task rows; blanks are represented consistently as `Unassigned`.
+- Attention offers `Needs attention` and `Overdue`. Exact Waiting remains the existing Status filter, avoiding ambiguous overlap with overdue Waiting Tasks.
+- Filters combine by intersection, update the visible-result count immediately and have a single `Clear filters` reset.
+- Creating a new Task clears active filters so a successfully created Task cannot remain hidden by previous filter state.
+- Existing Task Drawer, CRUD behavior, optimistic concurrency and `/tasks?task=…` deep-link behavior are preserved.
+- Filtering is entirely client-side on the already loaded Task set. No API, database, schema, source, Task write gate or legacy Sheet change is part of this phase.
+- `scripts/verify-task-filters.ts` functionally tests combined filters, Attention semantics, Waiting overlap, practical text matching, `Unassigned`, option generation and default/clear state; static guards protect Drawer/deep-link integration and the no-network/no-write filter model.
+- Functional feature head `476944c123df2723c57307f8109db5149241c059` passed Vercel Preview `dpl_re1W3f3LTsCZhN9J4T8jtPnCyVsQ` with all existing Task/Portfolio/Search/Notifications checks plus `TASK_FILTERS_VERIFICATION_OK`, TypeScript and Next.js 16.3.0 green.
+
+Next gate: this documentation-inclusive feature head must pass an exact-head Vercel Preview. Only then may the feature be merged to `main`. Before merge, confirm the branch diff contains only Task-filter/build/documentation files and that Production `main` has not moved unexpectedly. After Production deployment, verify existing security/runtime gates remain unchanged and perform an authenticated browser test of combined filters, clear state and Task Drawer opening.
 
 ## Handoff
 
 1. Production Tasks: PostgreSQL read/write, verified 75/75.
 2. Production Assets: PostgreSQL read-only runtime, verified 19/19.
 3. Production Development: Hotel 57 + Hahnmühle + Square + Adam Riese + Old Post, 5 projects / 360 packages.
-4. Current Production `main` is `a15da231028bd7a4bf206bcb37ca5bc4c03b01e0`; Vercel `dpl_FYHsma3ZJ2Fjqig6qsJiANp8gaE3` is READY.
+4. Current Production `main` is `b6aecfa91f2945f41eb411f0f40c560f00fe1720`; Vercel `dpl_5oQJG9CeUVijiGcWjJGqfMjNubhb` is READY.
 5. Production project navigation is generic and database-membership based.
 6. Legacy Sheets remain read-only and receive no writeback.
-7. Project Gantt Phase A and Global Search Phase A are fully closed after successful authenticated browser verification.
-8. Dependency source values remain free text and must not be converted into technical graph edges by guesswork.
-9. Current isolated product work is `feature/basic-notifications-phase-a`. Functional head `34f11ab92560ee2fe8671d216fa933ffff99a32c` passed Preview `dpl_FAok1Yox6SJzstRivEkPbAd6kaX2` with all existing checks plus `BASIC_NOTIFICATIONS_VERIFICATION_OK`.
-10. Basic Notifications Phase A is Workspace-gated/read-only, personalized to the existing My Work owner and derived only from current Task state; it creates no persistence/schema/write path.
-11. Before merge: require an exact-head green Preview for the final documentation-inclusive branch, confirm the diff contains only intended notification/documentation files, and verify `main` has not moved unexpectedly.
+7. Project Gantt Phase A, Global Search Phase A and Basic Notifications Phase A are fully closed after successful authenticated browser verification.
+8. Dependency source values remain free text and must not be converted into technical graph edges by guesswork. Global Activity remains deferred while its Production data contains only legacy-import events.
+9. Current isolated product work is `feature/task-filters-phase-a`. Functional head `476944c123df2723c57307f8109db5149241c059` passed Preview `dpl_re1W3f3LTsCZhN9J4T8jtPnCyVsQ` with all existing checks plus `TASK_FILTERS_VERIFICATION_OK`.
+10. Task Filters Phase A is client-side only and changes no database/API/schema/source/gate or Task write path.
+11. Before merge: require an exact-head green Preview for the final documentation-inclusive branch, confirm the diff contains only intended Task-filter/build/documentation files, and verify `main` has not moved unexpectedly.
