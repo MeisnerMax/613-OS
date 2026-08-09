@@ -21,7 +21,7 @@
 - Google Calendar remains the home for real appointments, inspections, deadlines and milestones; project timelines belong in the application/Gantt layer.
 - Legacy Google Sheets are migration/read-only sources during transition. 613 OS must not write back to them.
 
-## Production source-of-truth status · 08.08.2026
+## Production source-of-truth status · 09.08.2026
 
 ### Tasks
 
@@ -100,13 +100,15 @@ Asset/Development runtime store remains read-only. Build verification rejects ru
 
 ## Current Production deployment state
 
-Functional Old Post merge commit:
+Current `main` after the completed Old Post cutover and Vercel rate-limit recovery:
 
-`c30afc345e2daa742234fcafcd0fba13dc98a2d3`
+`697387fee600e08adf7174c5379f51f600431547`
 
-A documentation-only `main` sync follows this functional merge to record the completed 5-project / 360-package baseline and to force an unambiguous Vercel Production build containing the same runtime code. The exact final deployment ID is recorded in the persistent Drive handoff after verification.
+Current Vercel Production deployment:
 
-Required Production build checks:
+`dpl_9jdPNDSHUeDcU32YnCYfx5yUopnm` — READY
+
+This Production deployment contains the Old Post verifier/runtime code and the completed 5-project / 360-package Development baseline. The build passed:
 
 - `POSTGRES_TASK_STORE_VERIFICATION_OK`
 - `TASK_INPUT_VALIDATION_OK`
@@ -115,6 +117,13 @@ Required Production build checks:
 - `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`
 - TypeScript
 - Next.js 16.3.0
+
+Production runtime checks after deployment:
+
+- `/api/auth/status` reports PostgreSQL sources and the approved Production gates.
+- unauthenticated `/api/verify/portfolio-db` returns HTTP 401 `AUTH_REQUIRED`.
+- unauthenticated Development project detail stays fail-closed and does not expose PostgreSQL payloads.
+- no runtime errors were found after deployment.
 
 Current verified database baseline:
 
@@ -192,22 +201,47 @@ Production completion:
   - project `663bcfc6b5afaafe30b0f2cfee78bd05`
   - work packages `dbf7c17ec611d55a3474b01934cc354b`
 - PR #6 merged with expected-head guard as `c30afc345e2daa742234fcafcd0fba13dc98a2d3`.
+- Final Production build after the Vercel rate-limit cleared is `dpl_9jdPNDSHUeDcU32YnCYfx5yUopnm` on `main` commit `697387fee600e08adf7174c5379f51f600431547`, READY with all build/runtime checks green.
 - No schema change and no Old-Post-specific UI/store path were required.
 
 ## Current development status
 
 The five modeled legacy Development project tabs are migrated. There is no remaining project tab in the current `Development_Projects_DE` migration set awaiting PostgreSQL cutover.
 
-The next project phase should therefore return to the broader 613 OS product roadmap rather than invent another legacy Development migration.
+The product roadmap has therefore returned to application functionality rather than inventing another legacy Development migration.
+
+## Product roadmap phase · Read-only Project Gantt · 09.08.2026
+
+The next planned block after stabilizing Tasks/Assets/Projects is Gantt + Dependencies. Phase A deliberately implements only the part that is already data-safe: a real read-only Gantt timeline from existing Development work-package dates.
+
+Verified Production data suitability before implementation:
+
+- 360/360 Development work packages have `start_date`.
+- 360/360 have `end_date`.
+- all five migrated projects span the modeled plan from 2026-07-12 through 2028-04-15.
+- 360/360 contain a `dependency` source value, but this field is descriptive free text such as `Bestandsaufmaß` or `Entwurf; TGA-Konzept`, not a normalized foreign-key/package-ID relation.
+
+Implementation boundary:
+
+- Feature branch: `feature/project-gantt-readonly`, based on Production `main` `697387fee600e08adf7174c5379f51f600431547`.
+- New server component `src/app/projects/[id]/GanttTimeline.tsx` derives timeline positions only from the existing `DevelopmentWorkPackage` fields.
+- `/projects/[id]` keeps the existing work-package table and adds the Gantt as an additional read-only view.
+- Gantt groups packages by phase and shows month axis, Today marker, status, owner, dates and the exact source dependency text.
+- No dependency arrows or inferred graph edges are created. Technical dependency linking is deferred until dependencies are explicitly normalized to unambiguous package IDs.
+- No database/schema/API/source-Sheet changes and no new write path.
+- `scripts/verify-asset-development-pilot.ts` now guards the Gantt integration, dynamic project route and read-only boundary.
+- Functional feature head `f42cf9336d0d44df1bdcf0011b29a7271650f657` passed Vercel Preview `dpl_Gj5oqbaQqvQgugYdAc7DEZXXidxY` with all Task checks, `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`, TypeScript and Next.js 16.3.0 green.
+
+Next gate: the final documentation-inclusive feature head must also pass an exact-head Vercel Preview before PR merge. After Production deployment, perform authenticated browser verification on at least one migrated project and confirm the Gantt renders correctly with real PostgreSQL data.
 
 ## Handoff
 
 1. Production Tasks: PostgreSQL read/write, verified 75/75.
 2. Production Assets: PostgreSQL read-only runtime, verified 19/19.
 3. Production Development: Hotel 57 + Hahnmühle + Square + Adam Riese + Old Post, 5 projects / 360 packages.
-4. Production project navigation is generic and database-membership based.
-5. Old Post `PRJ-0005 → A012` is live in the Production database at 72 packages, status 2/5/65, with full Production↔isolated parity.
-6. PR #6 functional merge commit is `c30afc345e2daa742234fcafcd0fba13dc98a2d3`; the documentation-only sync on `main` exists only to record this completed state and force an unambiguous Production build.
-7. Legacy Sheets remain read-only and receive no writeback.
-8. No schema migration or project-specific runtime path was needed for Old Post.
-9. After the documentation-triggered Production deployment is verified, update the persistent Drive handoff with the exact deployment ID and runtime status, then proceed to the next checked product-roadmap step.
+4. Current Production `main` is `697387fee600e08adf7174c5379f51f600431547`; Vercel `dpl_9jdPNDSHUeDcU32YnCYfx5yUopnm` is READY.
+5. Production project navigation is generic and database-membership based.
+6. Legacy Sheets remain read-only and receive no writeback.
+7. Current isolated product work is `feature/project-gantt-readonly`: read-only Project Gantt only, no schema/data/API writes.
+8. Functional Gantt head `f42cf9336d0d44df1bdcf0011b29a7271650f657` passed Preview `dpl_Gj5oqbaQqvQgugYdAc7DEZXXidxY`; final documentation-inclusive head still requires exact-head Preview verification before merge.
+9. Dependency source values are free text and must not be converted into arrows/technical dependencies by guesswork. A later dependency-normalization phase requires its own checked design and approval boundary.

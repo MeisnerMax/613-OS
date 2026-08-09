@@ -14,6 +14,8 @@ const migration = readFileSync(join(root, "migrations/0002_asset_development_pil
 const rollback = readFileSync(join(root, "migrations/0002_asset_development_pilot_rollback.sql"), "utf8");
 const projectsPage = readFileSync(join(root, "src/app/projects/page.tsx"), "utf8");
 const projectDetailPage = readFileSync(join(root, "src/app/projects/[id]/page.tsx"), "utf8");
+const projectDetailStyles = readFileSync(join(root, "src/app/projects/[id]/project-detail.css"), "utf8");
+const ganttTimeline = readFileSync(join(root, "src/app/projects/[id]/GanttTimeline.tsx"), "utf8");
 const assetsPage = readFileSync(join(root, "src/app/assets/page.tsx"), "utf8");
 const assetsStyles = readFileSync(join(root, "src/app/assets/assets.css"), "utf8");
 const assetDetailPage = readFileSync(join(root, "src/app/assets/[id]/page.tsx"), "utf8");
@@ -58,9 +60,18 @@ assert(projectsPage.includes('export const dynamic = "force-dynamic"'), "Project
 assert(projectsPage.includes("getMigratedDevelopmentProjectIds"), "Projects overview must query the migrated Development project set.");
 assert(projectsPage.includes("migratedProjects.has(p.id)"), "Projects overview must link projects based on migrated database membership.");
 assert(!projectsPage.includes('p.id === "PRJ-0001"'), "Projects overview must not hard-code Hotel 57 as the only linked project.");
+assert(projectDetailPage.includes('export const dynamic = "force-dynamic"'), "Project detail must stay dynamic so the Workspace session gate runs at request time.");
 assert(projectDetailPage.includes("getDevelopmentProjectDetail"), "Project detail metadata read is missing.");
 assert(projectDetailPage.includes("getProjectWorkPackages"), "Project work-package read is missing.");
 assert(projectDetailPage.includes("packages.map"), "Project work-package table is missing.");
+assert(projectDetailPage.includes("GanttTimeline"), "Project detail must expose the read-only Gantt timeline.");
+assert(ganttTimeline.includes("DevelopmentWorkPackage"), "Gantt timeline must use the existing Development work-package domain model.");
+assert(ganttTimeline.includes("item.start") && ganttTimeline.includes("item.end"), "Gantt timeline must derive bars from existing start/end fields.");
+assert(ganttTimeline.includes("item.dependency"), "Gantt timeline must disclose the existing dependency source text.");
+assert(ganttTimeline.includes("Dependencies are shown exactly as source text"), "Gantt timeline must disclose that dependencies are not normalized links yet.");
+assert(!/\b(INSERT|UPDATE|DELETE|TRUNCATE)\b/i.test(ganttTimeline), "Gantt timeline must remain read-only.");
+assert(projectDetailStyles.includes(".ganttPanel"), "Gantt timeline styling is missing.");
+assert(projectDetailStyles.includes(".ganttBar.done") && projectDetailStyles.includes(".ganttBar.progress") && projectDetailStyles.includes(".ganttBar.pending"), "Gantt status styling is incomplete.");
 assert(assetsPage.includes('export const dynamic = "force-dynamic"'), "Asset overview must stay dynamic so the Workspace session gate runs at request time.");
 assert(assetsPage.includes("Direct open tasks"), "Asset task metric must disclose direct-only linkage.");
 assert(assetsPage.includes("Migrated projects"), "Asset project metric must disclose staged migration scope.");
