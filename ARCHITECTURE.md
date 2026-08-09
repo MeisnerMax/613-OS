@@ -100,15 +100,15 @@ Asset/Development runtime store remains read-only. Build verification rejects ru
 
 ## Current Production deployment state
 
-Current `main` after the completed Old Post cutover and Vercel rate-limit recovery:
+Current functional `main` after the read-only Project Gantt merge:
 
-`697387fee600e08adf7174c5379f51f600431547`
+`5a4942fc3e0aab8a32778f5205164991a49fb68e`
 
-Current Vercel Production deployment:
+Functional Vercel Production deployment:
 
-`dpl_9jdPNDSHUeDcU32YnCYfx5yUopnm` — READY
+`dpl_CHExepaoFWD7zTHyvhyTqPM3K23L` — READY
 
-This Production deployment contains the Old Post verifier/runtime code and the completed 5-project / 360-package Development baseline. The build passed:
+This Production deployment contains the completed 5-project / 360-package Development baseline plus the read-only Project Gantt Phase A. The build passed:
 
 - `POSTGRES_TASK_STORE_VERIFICATION_OK`
 - `TASK_INPUT_VALIDATION_OK`
@@ -123,9 +123,10 @@ Production runtime checks after deployment:
 - `/api/auth/status` reports PostgreSQL sources and the approved Production gates.
 - unauthenticated `/api/verify/portfolio-db` returns HTTP 401 `AUTH_REQUIRED`.
 - unauthenticated Development project detail stays fail-closed and does not expose PostgreSQL payloads.
-- no runtime errors were found after deployment.
+- no error/fatal runtime logs were found after deployment.
+- authenticated visual browser verification of the new Gantt is still pending user confirmation.
 
-Current verified database baseline:
+Current verified database baseline remains unchanged by the Gantt phase:
 
 - Tasks: 75/75
 - Assets: 19/19, status 9/8/2
@@ -221,27 +222,31 @@ Verified Production data suitability before implementation:
 - all five migrated projects span the modeled plan from 2026-07-12 through 2028-04-15.
 - 360/360 contain a `dependency` source value, but this field is descriptive free text such as `Bestandsaufmaß` or `Entwurf; TGA-Konzept`, not a normalized foreign-key/package-ID relation.
 
-Implementation boundary:
+Implemented Production boundary:
 
-- Feature branch: `feature/project-gantt-readonly`, based on Production `main` `697387fee600e08adf7174c5379f51f600431547`.
+- Feature branch `feature/project-gantt-readonly` was based on Production `main` `697387fee600e08adf7174c5379f51f600431547`.
 - New server component `src/app/projects/[id]/GanttTimeline.tsx` derives timeline positions only from the existing `DevelopmentWorkPackage` fields.
 - `/projects/[id]` keeps the existing work-package table and adds the Gantt as an additional read-only view.
 - Gantt groups packages by phase and shows month axis, Today marker, status, owner, dates and the exact source dependency text.
 - No dependency arrows or inferred graph edges are created. Technical dependency linking is deferred until dependencies are explicitly normalized to unambiguous package IDs.
 - No database/schema/API/source-Sheet changes and no new write path.
-- `scripts/verify-asset-development-pilot.ts` now guards the Gantt integration, dynamic project route and read-only boundary.
-- Functional feature head `f42cf9336d0d44df1bdcf0011b29a7271650f657` passed Vercel Preview `dpl_Gj5oqbaQqvQgugYdAc7DEZXXidxY` with all Task checks, `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`, TypeScript and Next.js 16.3.0 green.
+- `scripts/verify-asset-development-pilot.ts` guards the Gantt integration, dynamic project route and read-only boundary.
+- Functional feature head `f42cf9336d0d44df1bdcf0011b29a7271650f657` passed Vercel Preview `dpl_Gj5oqbaQqvQgugYdAc7DEZXXidxY`.
+- Final documentation-inclusive feature head `d145f9a9cce787c98c7df973b98609f228ae282a` passed Vercel Preview `dpl_ED2YezvMWJeHQAMRagp1U1Phn1Tj`.
+- PR #7 merged with expected-head guard as `5a4942fc3e0aab8a32778f5205164991a49fb68e`.
+- Functional Production deployment `dpl_CHExepaoFWD7zTHyvhyTqPM3K23L` is READY and passed all Task checks, `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`, TypeScript and Next.js 16.3.0.
+- Production security checks remain green and no error/fatal runtime logs were found.
 
-Next gate: the final documentation-inclusive feature head must also pass an exact-head Vercel Preview before PR merge. After Production deployment, perform authenticated browser verification on at least one migrated project and confirm the Gantt renders correctly with real PostgreSQL data.
+Remaining closure gate: authenticated browser verification on at least one migrated project must confirm that the Gantt renders correctly with real PostgreSQL data, including month timeline, bars, phase groups, horizontal scrolling and dependency source text.
 
 ## Handoff
 
 1. Production Tasks: PostgreSQL read/write, verified 75/75.
 2. Production Assets: PostgreSQL read-only runtime, verified 19/19.
 3. Production Development: Hotel 57 + Hahnmühle + Square + Adam Riese + Old Post, 5 projects / 360 packages.
-4. Current Production `main` is `697387fee600e08adf7174c5379f51f600431547`; Vercel `dpl_9jdPNDSHUeDcU32YnCYfx5yUopnm` is READY.
+4. Functional Production `main` is `5a4942fc3e0aab8a32778f5205164991a49fb68e`; Vercel `dpl_CHExepaoFWD7zTHyvhyTqPM3K23L` is READY.
 5. Production project navigation is generic and database-membership based.
 6. Legacy Sheets remain read-only and receive no writeback.
-7. Current isolated product work is `feature/project-gantt-readonly`: read-only Project Gantt only, no schema/data/API writes.
-8. Functional Gantt head `f42cf9336d0d44df1bdcf0011b29a7271650f657` passed Preview `dpl_Gj5oqbaQqvQgugYdAc7DEZXXidxY`; final documentation-inclusive head still requires exact-head Preview verification before merge.
-9. Dependency source values are free text and must not be converted into arrows/technical dependencies by guesswork. A later dependency-normalization phase requires its own checked design and approval boundary.
+7. Project Gantt Phase A is live in Production and remains strictly read-only; it required no database/schema/API/source changes.
+8. Dependency source values are free text and must not be converted into arrows/technical dependencies by guesswork. A later dependency-normalization phase requires its own checked design and approval boundary.
+9. Authenticated browser verification of the Gantt is the only remaining closure gate before proceeding to the next checked roadmap step.
