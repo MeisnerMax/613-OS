@@ -102,13 +102,13 @@ Asset/Development runtime store remains read-only. Build verification rejects ru
 
 Current Production `main`:
 
-`b6aecfa91f2945f41eb411f0f40c560f00fe1720`
+`7a8ac766fcdba12f9aca58603984fe438c07da90`
 
 Current Vercel Production deployment:
 
-`dpl_5oQJG9CeUVijiGcWjJGqfMjNubhb` — READY
+`dpl_J8SGF2ghbj4nvQdbG5gmjvfZy4i7` — READY
 
-This Production deployment contains the completed 5-project / 360-package Development baseline, read-only Project Gantt Phase A, Global Search Phase A and Basic Notifications Phase A. The build passed:
+This Production deployment contains the completed 5-project / 360-package Development baseline, read-only Project Gantt Phase A, Global Search Phase A, Basic Notifications Phase A and Task Filters Phase A. The build passed:
 
 - `POSTGRES_TASK_STORE_VERIFICATION_OK`
 - `TASK_INPUT_VALIDATION_OK`
@@ -117,6 +117,7 @@ This Production deployment contains the completed 5-project / 360-package Develo
 - `ASSET_DEVELOPMENT_PILOT_VERIFICATION_OK`
 - `GLOBAL_SEARCH_VERIFICATION_OK`
 - `BASIC_NOTIFICATIONS_VERIFICATION_OK`
+- `TASK_FILTERS_VERIFICATION_OK`
 - TypeScript
 - Next.js 16.3.0
 
@@ -128,7 +129,7 @@ Production runtime checks after deployment:
 - unauthenticated `/api/verify/portfolio-db` returns HTTP 401 `AUTH_REQUIRED`.
 - unauthenticated Development project detail stays fail-closed and does not expose PostgreSQL payloads.
 - no error/fatal runtime logs were found after deployment.
-- authenticated visual browser verification of Gantt, Global Search and Basic Notifications was confirmed successfully by the user on 09.08.2026.
+- authenticated visual browser verification of Gantt, Global Search, Basic Notifications and Task Filters was confirmed successfully by the user on 09.08.2026.
 
 Current verified database baseline remains unchanged:
 
@@ -328,19 +329,22 @@ Implementation boundary:
 - Filtering is entirely client-side on the already loaded Task set. No API, database, schema, source, Task write gate or legacy Sheet change is part of this phase.
 - `scripts/verify-task-filters.ts` functionally tests combined filters, Attention semantics, Waiting overlap, practical text matching, `Unassigned`, option generation and default/clear state; static guards protect Drawer/deep-link integration and the no-network/no-write filter model.
 - Functional feature head `476944c123df2723c57307f8109db5149241c059` passed Vercel Preview `dpl_re1W3f3LTsCZhN9J4T8jtPnCyVsQ` with all existing Task/Portfolio/Search/Notifications checks plus `TASK_FILTERS_VERIFICATION_OK`, TypeScript and Next.js 16.3.0 green.
-
-Next gate: this documentation-inclusive feature head must pass an exact-head Vercel Preview. Only then may the feature be merged to `main`. Before merge, confirm the branch diff contains only Task-filter/build/documentation files and that Production `main` has not moved unexpectedly. After Production deployment, verify existing security/runtime gates remain unchanged and perform an authenticated browser test of combined filters, clear state and Task Drawer opening.
+- Final documentation-inclusive feature head `105578db01a4b472f735cada166347bd0674e854` passed Vercel Preview `dpl_5Em2LfjVES4mfycSYEoPykPbEijJ` with all existing Task/Portfolio/Search/Notifications checks plus `TASK_FILTERS_VERIFICATION_OK`, TypeScript and Next.js 16.3.0 green.
+- PR #10 merged with expected-head guard as `7a8ac766fcdba12f9aca58603984fe438c07da90`.
+- Production deployment `dpl_J8SGF2ghbj4nvQdbG5gmjvfZy4i7` is READY.
+- Production gates remained unchanged; unauthenticated `/api/notifications`, `/api/search?q=Hotel` and `/api/verify/portfolio-db` return HTTP 401 `AUTH_REQUIRED`; database baseline remains 75 Tasks / 19 Assets / 5 Development projects / 360 work packages; no error/fatal runtime logs were found.
+- Authenticated browser verification of combined filters, `Clear filters` and Task Drawer opening was confirmed successfully by the user on 09.08.2026. Task Filters Phase A is fully closed.
 
 ## Handoff
 
 1. Production Tasks: PostgreSQL read/write, verified 75/75.
 2. Production Assets: PostgreSQL read-only runtime, verified 19/19.
 3. Production Development: Hotel 57 + Hahnmühle + Square + Adam Riese + Old Post, 5 projects / 360 packages.
-4. Current Production `main` is `b6aecfa91f2945f41eb411f0f40c560f00fe1720`; Vercel `dpl_5oQJG9CeUVijiGcWjJGqfMjNubhb` is READY.
+4. Current Production `main` is `7a8ac766fcdba12f9aca58603984fe438c07da90`; Vercel `dpl_J8SGF2ghbj4nvQdbG5gmjvfZy4i7` is READY.
 5. Production project navigation is generic and database-membership based.
 6. Legacy Sheets remain read-only and receive no writeback.
-7. Project Gantt Phase A, Global Search Phase A and Basic Notifications Phase A are fully closed after successful authenticated browser verification.
+7. Project Gantt Phase A, Global Search Phase A, Basic Notifications Phase A and Task Filters Phase A are fully closed after successful authenticated browser verification.
 8. Dependency source values remain free text and must not be converted into technical graph edges by guesswork. Global Activity remains deferred while its Production data contains only legacy-import events.
-9. Current isolated product work is `feature/task-filters-phase-a`. Functional head `476944c123df2723c57307f8109db5149241c059` passed Preview `dpl_re1W3f3LTsCZhN9J4T8jtPnCyVsQ` with all existing checks plus `TASK_FILTERS_VERIFICATION_OK`.
-10. Task Filters Phase A is client-side only and changes no database/API/schema/source/gate or Task write path.
-11. Before merge: require an exact-head green Preview for the final documentation-inclusive branch, confirm the diff contains only intended Task-filter/build/documentation files, and verify `main` has not moved unexpectedly.
+9. Task Filters Phase A is client-side only and changed no database/API/schema/source/gate or Task write path.
+10. There is no active isolated product feature after Task Filters Phase A closure.
+11. Select the next product block only after a fresh checked roadmap/code/data review.
