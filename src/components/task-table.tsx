@@ -16,7 +16,7 @@ import {
 
 const statusFilters: Array<"All" | TaskStatus> = ["All", "Open", "In progress", "Waiting", "Done"];
 const priorityFilters: TaskPriorityFilter[] = ["All", "High", "Medium", "Low"];
-const attentionFilters: TaskAttentionFilter[] = ["All", "Needs attention", "Overdue", "Waiting"];
+const attentionFilters: TaskAttentionFilter[] = ["All", "Needs attention", "Overdue"];
 
 function initials(value: string) {
   const parts = value.trim().split(/\s+/).filter(Boolean);
